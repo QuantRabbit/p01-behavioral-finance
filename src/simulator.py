@@ -239,7 +239,13 @@ def run_simulation(
     state = PortfolioState.empty(n, k_slots, d_lots, cash=population.wealth)
 
     # --- acumuladores por cuenta ----------------------------------------
-    g_r = np.zeros(n); g_p = np.zeros(n); l_r = np.zeros(n); l_p = np.zeros(n)
+    # Los cuatro conteos de Odean bajo las DOS convenciones de venta parcial.
+    # Ambas se acumulan siempre: la convencion solo afecta al conteo, no a la
+    # conducta, asi que no hace falta volver a simular para compararlas.
+    counts = {
+        "partial_as_full": [np.zeros(n) for _ in range(4)],
+        "partial_as_fraction": [np.zeros(n) for _ in range(4)],
+    }
     days_gain = np.zeros(n); days_loss = np.zeros(n); days_neutral = np.zeros(n)
     sells_gain = np.zeros(n); sells_loss = np.zeros(n); sells_neutral = np.zeros(n)
     volume_mid = np.zeros(n)
@@ -366,10 +372,12 @@ def run_simulation(
         # ---- contabilidad de Odean: solo dias con al menos una venta ----
         agent_traded = sell_unit.any(axis=(1, 2))
         sale_days += agent_traded
-        d_gr, d_gp, d_lr, d_lp = odean_counts(
-            is_gain, is_loss, sell_unit, fraction, agent_traded, acc.partial_counting
-        )
-        g_r += d_gr; g_p += d_gp; l_r += d_lr; l_p += d_lp
+        for conv, acumuladores in counts.items():
+            for acumulador, valor in zip(
+                acumuladores,
+                odean_counts(is_gain, is_loss, sell_unit, fraction, agent_traded, conv),
+            ):
+                acumulador += valor
 
         # ---- horizontes de tenencia de las ventas ----------------------
         if agent_traded.any():
@@ -511,7 +519,6 @@ def run_simulation(
         # negociado y la comision es fija por orden.
         "spread_cost": volume_mid * cfg.costs.half_spread,
         "commission_cost": trade_count * cfg.costs.commission,
-        "G_r": g_r, "G_p": g_p, "L_r": l_r, "L_p": l_p,
         "position_days_in_gain": days_gain,
         "position_days_in_loss": days_loss,
         "position_days_neutral": days_neutral,
@@ -524,6 +531,12 @@ def run_simulation(
     })
     accounts["median_holding_winners"] = med_g
     accounts["median_holding_losers"] = med_l
+    sufijos = {"partial_as_full": "full", "partial_as_fraction": "frac"}
+    for conv, suf in sufijos.items():
+        for nombre, valores in zip(("G_r", "G_p", "L_r", "L_p"), counts[conv]):
+            accounts[f"{nombre}_{suf}"] = valores
+    for nombre in ("G_r", "G_p", "L_r", "L_p"):
+        accounts[nombre] = accounts[f"{nombre}_{sufijos[acc.partial_counting]}"]
     for name in CELL_NAMES:
         accounts[f"cell_{name}_opp"] = cell_opp[name]
         accounts[f"cell_{name}_sell"] = cell_sell[name]

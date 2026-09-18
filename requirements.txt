@@ -1,0 +1,10 @@
+# Dependencias reales del proyecto (todas se importan en src/, tests/ o notebooks/).
+numpy==2.2.2
+pandas==2.2.3
+scipy==1.15.1
+statsmodels==0.14.4
+matplotlib==3.10.0
+pytest==9.1.1
+nbformat==5.10.4
+nbconvert==7.17.1
+ipykernel==6.29.5

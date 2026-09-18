@@ -231,9 +231,15 @@ def fig_firmas(firmas: pd.DataFrame, outdir: Path) -> Path:
     datos = firmas[list(CELL_NAMES)].to_numpy(float)
     etiquetas = ["A: perdida con\nrebote reciente", "B: ganancia\ninfraponderada",
                  "C: perdida\nsobreponderada"]
-    vmax = float(np.nanmax(np.abs(datos)))
+    # La firma del rebalanceo es un orden de magnitud mas extrema que las demas
+    # (nunca vende ganadoras infraponderadas y SIEMPRE recorta perdedoras
+    # sobreponderadas). Si la escala de color se ajusta a ese maximo, el resto
+    # de la matriz queda plano. Se satura la escala y el numero exacto queda
+    # impreso en cada celda.
+    vmax = max(1.0, float(np.nanpercentile(np.abs(datos), 85)))
+    saturadas = int(np.nansum(np.abs(datos) > vmax))
     fig, ax = plt.subplots(figsize=(7.6, 5.2))
-    im = ax.imshow(datos, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
+    im = ax.imshow(np.clip(datos, -vmax, vmax), cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
     ax.set_xticks(range(len(etiquetas)))
     ax.set_xticklabels(etiquetas, fontsize=8)
     ax.set_yticks(range(len(firmas)))
@@ -244,8 +250,11 @@ def fig_firmas(firmas: pd.DataFrame, outdir: Path) -> Path:
             if np.isfinite(v):
                 ax.text(j, i, f"{v:+.2f}", ha="center", va="center", fontsize=8,
                         color="white" if abs(v) > 0.6 * vmax else "black")
-    ax.set_title("Matriz de firmas: log-razon de la tasa de venta condicional contra la tasa base",
-                 fontsize=10.5, pad=12)
+    ax.set_title(
+        "Matriz de firmas: log-razon de la tasa de venta condicional contra la tasa base\n"
+        f"(escala de color saturada en +/-{vmax:.1f}; {saturadas} celdas exceden esa magnitud)",
+        fontsize=10.5, pad=12,
+    )
     fig.colorbar(im, ax=ax, shrink=0.8, label="log(tasa de la celda / tasa base)")
     return _save(fig, outdir, "fig08_matriz_firmas.png")
 

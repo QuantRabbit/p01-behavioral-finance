@@ -92,6 +92,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--null-reps", type=int, default=20, help="replicas del escenario nulo")
     p.add_argument("--disp-reps", type=int, default=10,
                    help="replicas del escenario de disposicion alta (variabilidad entre trayectorias)")
+    p.add_argument("--wide-spread-bps", type=float, default=200.0,
+                   help="spread ancho para la prueba de frontera de la referencia de costo")
     p.add_argument("--outdir", default="outputs", help="directorio de salida")
     p.add_argument("--all", action="store_true", help="corre todo: escenarios, barridos, replicas y figuras")
     p.add_argument("--scenarios-only", action="store_true", help="solo los 9 escenarios")
@@ -205,6 +207,8 @@ def main(argv=None) -> int:
     nulos = pd.DataFrame()
     disp_reps = pd.DataFrame()
     grid = pd.DataFrame()
+    grid_ancho = pd.DataFrame()
+    efecto_ref = {}
     monot = []
     resumen_reps = {}
 
@@ -265,6 +269,36 @@ def main(argv=None) -> int:
             f"{grid['PGR_menos_PLR'].max():.4f} (rango {rango:.4f}); "
             f"delta_hat entre {grid['delta_hat'].min():.4f} y {grid['delta_hat'].max():.4f}")
 
+        # --------------------------------------------------------------
+        # 6b) Frontera: la misma rejilla con un spread ancho
+        # --------------------------------------------------------------
+        # Con 10 bps el sesgo de medio spread de la referencia 'ask_paid' es
+        # despreciable frente a los movimientos diarios de precio. Se repite la
+        # rejilla con un spread de mercado ilquido para ubicar la frontera a
+        # partir de la cual la eleccion de referencia si importa.
+        cfg_ancho = replace(cfg, costs=CostConfig(commission=args.commission,
+                                                  spread_bps=args.wide_spread_bps))
+        log(f"Rejilla contable con spread ancho ({args.wide_spread_bps:.0f} bps)...")
+        grid_ancho = run_accounting_grid(cfg_ancho, est,
+                                         SCENARIO_BY_KEY["esc3_disposicion_alta"], args.seed)
+        save_table(grid_ancho, outdir / "sensibilidad_contable_spread_ancho", floatfmt="{:.5f}")
+        base_mid = grid[(grid.referencia == "mid") & (grid.conteo_parcial == "partial_as_full")]
+        base_ask = grid[(grid.referencia == "ask_paid") & (grid.conteo_parcial == "partial_as_full")]
+        anc_mid = grid_ancho[(grid_ancho.referencia == "mid") & (grid_ancho.conteo_parcial == "partial_as_full")]
+        anc_ask = grid_ancho[(grid_ancho.referencia == "ask_paid") & (grid_ancho.conteo_parcial == "partial_as_full")]
+        efecto_ref = {
+            "spread_bps_base": args.spread_bps,
+            "spread_bps_ancho": args.wide_spread_bps,
+            "delta_PGR_menos_PLR_base": float(base_ask["PGR_menos_PLR"].mean() - base_mid["PGR_menos_PLR"].mean()),
+            "delta_PGR_menos_PLR_ancho": float(anc_ask["PGR_menos_PLR"].mean() - anc_mid["PGR_menos_PLR"].mean()),
+            "delta_hat_base_mid": float(base_mid["delta_hat"].mean()),
+            "delta_hat_ancho_mid": float(anc_mid["delta_hat"].mean()),
+            "delta_hat_ancho_ask": float(anc_ask["delta_hat"].mean()),
+        }
+        log(f"  efecto de la referencia sobre PGR-PLR: {efecto_ref['delta_PGR_menos_PLR_base']:+.5f} "
+            f"a {args.spread_bps:.0f} bps vs {efecto_ref['delta_PGR_menos_PLR_ancho']:+.5f} "
+            f"a {args.wide_spread_bps:.0f} bps")
+
     # ------------------------------------------------------------------
     # 7) JSON completo
     # ------------------------------------------------------------------
@@ -293,6 +327,8 @@ def main(argv=None) -> int:
         "replicas_disposicion_alta": disp_reps.to_dict(orient="records") if len(disp_reps) else [],
         "resumen_replicas": resumen_reps,
         "sensibilidad_contable": grid.to_dict(orient="records") if len(grid) else [],
+        "sensibilidad_contable_spread_ancho": grid_ancho.to_dict(orient="records") if len(grid_ancho) else [],
+        "efecto_referencia_por_spread": efecto_ref,
     }
     save_json(completo, outdir / "resultados_completos.json")
     log(f"JSON completo -> outputs/resultados_completos.json ({elapsed:.1f}s de computo)")

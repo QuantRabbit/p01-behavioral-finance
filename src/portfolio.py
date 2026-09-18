@@ -97,11 +97,15 @@ class PortfolioState:
         return self.active_positions().sum(axis=1)
 
     def held_mask(self, n_assets: int) -> np.ndarray:
-        """(N, M) bool: que activos tiene cada agente en cartera."""
-        out = np.zeros((self.n_agents, n_assets), dtype=bool)
-        rows, slots = np.nonzero(self.active_positions())
-        out[rows, self.asset_idx[rows, slots]] = True
-        return out
+        """(N, M) bool: que activos tiene cada agente en cartera.
+
+        Las ranuras vacias se dirigen a una columna sumidero que luego se
+        descarta, lo que evita un ``nonzero`` sobre toda la matriz.
+        """
+        out = np.zeros((self.n_agents, n_assets + 1), dtype=bool)
+        idx = np.where(self.asset_idx == EMPTY, n_assets, self.asset_idx).astype(np.intp)
+        np.put_along_axis(out, idx, True, axis=1)
+        return out[:, :n_assets]
 
     def position_prices(self, prices_today: np.ndarray) -> np.ndarray:
         """(N, K) precio medio de hoy del activo de cada ranura (0 si vacia)."""
@@ -119,13 +123,15 @@ class PortfolioState:
 def decision_units(state: PortfolioState, cost_basis: str, reference: str):
     """Construye la unidad de decision vigente.
 
-    Devuelve ``(unit_active, unit_shares, unit_ref)``, todos de forma
-    ``(N, K, D)``.
+    Devuelve ``(unit_active, unit_shares, unit_ref)``.
 
-    - ``per_lot``: una unidad por lote con acciones positivas.
-    - ``fifo`` / ``average_cost``: una unidad por posicion, alojada en el
-      indice de lote 0, con las acciones agregadas de la posicion y el precio
-      de referencia de la convencion correspondiente.
+    - ``per_lot``: una unidad por lote con acciones positivas; forma ``(N,K,D)``.
+    - ``fifo`` / ``average_cost``: una unidad por posicion, con las acciones
+      agregadas y el precio de referencia de la convencion correspondiente;
+      forma ``(N,K,1)``.
+
+    La dimension final es siempre la del "eje de unidad", lo que permite
+    escribir el resto del motor sin ramificar por convencion.
     """
     lots = state.lot_shares
     price_field = state.lot_mid if reference == "mid" else state.lot_ask
@@ -152,12 +158,9 @@ def decision_units(state: PortfolioState, cost_basis: str, reference: str):
     else:  # pragma: no cover - validado en AccountingConfig
         raise ValueError(f"base de costo desconocida: {cost_basis}")
 
-    unit_active = np.zeros_like(lot_alive)
-    unit_active[:, :, 0] = pos_active
-    unit_shares = np.zeros_like(lots)
-    unit_shares[:, :, 0] = np.where(pos_active, pos_shares, 0.0)
-    unit_ref = np.zeros_like(lots)
-    unit_ref[:, :, 0] = np.where(pos_active, ref_pos, 0.0)
+    unit_active = pos_active[:, :, None]
+    unit_shares = np.where(pos_active, pos_shares, 0.0)[:, :, None]
+    unit_ref = np.where(pos_active, ref_pos, 0.0)[:, :, None]
     return unit_active, unit_shares, unit_ref
 
 
@@ -220,30 +223,27 @@ def apply_sales(
         to_remove_pos = np.where(sell_unit[:, :, 0], lots.sum(axis=2) * fraction[:, :, 0], 0.0)
         removed = allocate_removal(lots, to_remove_pos, cost_basis)
 
-    state.lot_shares = lots - removed
-    # Limpieza numerica: acciones residuales por debajo del epsilon se anulan.
-    state.lot_shares[state.lot_shares < _EPS] = 0.0
-    _clear_empty_lots(state)
+    # Limpieza numerica: acciones residuales por debajo del epsilon se anulan,
+    # y con ellas el precio y el dia de compra del lote.
+    new_lots = lots - removed
+    alive = new_lots > _EPS
+    state.lot_shares = new_lots * alive
+    state.lot_mid *= alive
+    state.lot_ask *= alive
+    state.lot_day *= alive
     _clear_closed_positions(state)
     return removed.sum(axis=2)
 
 
-def _clear_empty_lots(state: PortfolioState) -> None:
-    dead = state.lot_shares <= 0.0
-    state.lot_mid[dead] = 0.0
-    state.lot_ask[dead] = 0.0
-    state.lot_day[dead] = 0
-
-
 def _clear_closed_positions(state: PortfolioState) -> None:
-    closed = state.active_positions() & (state.lot_shares.sum(axis=2) <= 0.0)
-    if not closed.any():
-        return
-    state.asset_idx[closed] = EMPTY
-    state.lot_shares[closed] = 0.0
-    state.lot_mid[closed] = 0.0
-    state.lot_ask[closed] = 0.0
-    state.lot_day[closed] = 0
+    """Libera las ranuras cuya posicion quedo en cero acciones.
+
+    Los arreglos de lote ya estan en cero para esas ranuras, asi que basta con
+    marcar el activo como vacio.
+    """
+    closed = (state.asset_idx != EMPTY) & (state.lot_shares.sum(axis=2) <= 0.0)
+    if closed.any():
+        state.asset_idx = np.where(closed, EMPTY, state.asset_idx).astype(np.int32)
 
 
 # ---------------------------------------------------------------------------
@@ -325,13 +325,39 @@ def odean_counts(
     loss = is_loss & act
 
     if partial_counting == "partial_as_full":
-        w_real = np.where(sell_unit, 1.0, 0.0)
-    else:
-        w_real = np.where(sell_unit, fraction, 0.0)
-    w_paper = 1.0 - w_real
+        # Camino rapido puramente booleano.
+        sold = sell_unit
+        g_r = (gain & sold).sum(axis=(1, 2)).astype(float)
+        l_r = (loss & sold).sum(axis=(1, 2)).astype(float)
+        g_p = gain.sum(axis=(1, 2)) - g_r
+        l_p = loss.sum(axis=(1, 2)) - l_r
+        return g_r, g_p, l_r, l_p
 
+    w_real = np.where(sell_unit, fraction, 0.0)
     g_r = (gain * w_real).sum(axis=(1, 2))
-    g_p = (gain * w_paper).sum(axis=(1, 2))
     l_r = (loss * w_real).sum(axis=(1, 2))
-    l_p = (loss * w_paper).sum(axis=(1, 2))
+    g_p = gain.sum(axis=(1, 2)) - g_r
+    l_p = loss.sum(axis=(1, 2)) - l_r
     return g_r, g_p, l_r, l_p
+
+
+def unit_buy_days(state: PortfolioState, cost_basis: str) -> np.ndarray:
+    """(N, K, D) dia de compra atribuido a cada unidad de decision.
+
+    Coherente con la base de costo: ``per_lot`` usa el dia del lote, ``fifo`` el
+    del lote vivo mas antiguo y ``average_cost`` el promedio ponderado por
+    acciones. Se usa para medir horizontes de tenencia de ganadoras y perdedoras.
+    """
+    lots = state.lot_shares
+    alive = lots > _EPS
+    days = state.lot_day.astype(float)
+    if cost_basis == "per_lot":
+        return np.where(alive, days, 0.0)
+
+    if cost_basis == "fifo":
+        first_alive = np.argmax(alive, axis=2)
+        out = np.take_along_axis(days, first_alive[..., None], axis=2)
+    else:
+        pos = lots.sum(axis=2)
+        out = np.where(pos > _EPS, (lots * days).sum(axis=2) / np.maximum(pos, _EPS), 0.0)[:, :, None]
+    return out

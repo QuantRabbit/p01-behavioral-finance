@@ -53,7 +53,9 @@ def test_per_lot_produce_una_unidad_por_lote():
     assert sh_pl[0, 0, 0] == 100.0 and sh_pl[0, 0, 1] == 100.0
 
     act_fi, sh_fi, _ = decision_units(st, "fifo", "mid")
-    assert act_fi[0, 0].tolist() == [True, False, False, False]
+    assert act_pl.shape[2] == st.max_lots, "per_lot usa el eje completo de lotes"
+    assert act_fi.shape[2] == 1, "fifo colapsa el eje de unidad a la posicion"
+    assert act_fi[0, 0].tolist() == [True]
     assert sh_fi[0, 0, 0] == 200.0, "bajo fifo la unidad agrega toda la posicion"
 
 

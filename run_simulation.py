@@ -211,6 +211,7 @@ def main(argv=None) -> int:
     efecto_ref = {}
     monot = []
     resumen_reps = {}
+    deriva = {}
 
     if correr_todo:
         # --------------------------------------------------------------
@@ -257,6 +258,22 @@ def main(argv=None) -> int:
         log(f"  error de recuperacion de delta en las replicas: "
             f"media {disp_reps['error_recuperacion'].mean():+.5f}, "
             f"max |.| {disp_reps['error_recuperacion'].abs().max():.5f}")
+
+        # La brecha de horizontes de tenencia (ganadoras menos perdedoras) es un
+        # estadistico de Odean (1998). Bajo el nulo deberia ser cero; se prueba
+        # si en realidad la arrastra la deriva realizada del mercado.
+        corr_brecha = float(np.corrcoef(nulos["retorno_mercado_ew"], nulos["brecha_tenencia"])[0, 1])
+        gl = len(nulos) - 2
+        t_brecha = corr_brecha * np.sqrt(gl / max(1e-12, 1 - corr_brecha ** 2))
+        deriva = {
+            "corr_retorno_mercado_brecha_tenencia": corr_brecha,
+            "t": float(t_brecha),
+            "n_replicas": int(len(nulos)),
+            "brecha_media": float(nulos["brecha_tenencia"].mean()),
+            "brecha_sd": float(nulos["brecha_tenencia"].std(ddof=1)),
+        }
+        log(f"  bajo el nulo, Corr(retorno del mercado, brecha de tenencia) = "
+            f"{corr_brecha:+.3f} (t={t_brecha:.2f}) sobre {len(nulos)} trayectorias")
 
         # --------------------------------------------------------------
         # 6) Sensibilidad contable sobre el escenario 3
@@ -326,6 +343,7 @@ def main(argv=None) -> int:
         "replicas_nulo": nulos.to_dict(orient="records") if len(nulos) else [],
         "replicas_disposicion_alta": disp_reps.to_dict(orient="records") if len(disp_reps) else [],
         "resumen_replicas": resumen_reps,
+        "deriva_y_brecha_de_tenencia": deriva,
         "sensibilidad_contable": grid.to_dict(orient="records") if len(grid) else [],
         "sensibilidad_contable_spread_ancho": grid_ancho.to_dict(orient="records") if len(grid_ancho) else [],
         "efecto_referencia_por_spread": efecto_ref,

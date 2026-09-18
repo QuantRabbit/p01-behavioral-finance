@@ -1,0 +1,10 @@
+escenario,patron,coincide_pre_analisis,firma_mas_cercana,distancia,segunda,distancia_segunda
+Nulo,"A=base, B=base, C=base",ninguno,reversion,0.981904941651969,disposicion,1.8560000184963217
+Disposicion baja,"A=baja, B=alta, C=baja",disposicion,reversion,1.1993005897782718,disposicion,1.2869973384674627
+Disposicion alta,"A=baja, B=alta, C=baja",disposicion,disposicion,0.0,reversion,2.080233154383252
+Rotacion baja,"A=base, B=base, C=base",ninguno,reversion,0.9857651275470951,disposicion,1.8628121719908177
+Rotacion alta,"A=base, B=base, C=base",ninguno,reversion,0.9841052846053082,disposicion,1.8522358308559643
+Ambos activos,"A=baja, B=alta, C=baja",disposicion,disposicion,0.17866553824754683,reversion,2.1931391891033716
+Confound rebalanceo,"A=baja, B=baja, C=alta",ninguno,rebalanceo,0.0,reversion,9.095810986672738
+Confound reversion,"A=alta, B=alta, C=baja",ninguno,reversion,0.0,disposicion,2.080233154383252
+Poblacion heterogenea,"A=baja, B=alta, C=baja",disposicion,disposicion,0.8035630528345569,reversion,1.512221512963403

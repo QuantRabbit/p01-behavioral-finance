@@ -389,19 +389,30 @@ def check_monotonicity(sweep: pd.DataFrame, parametro: str, columna: str) -> Dic
 # ---------------------------------------------------------------------------
 # Replicas del escenario nulo
 # ---------------------------------------------------------------------------
-def run_null_replicates(
-    base_cfg: SimConfig, est: EstimationConfig, n_reps: int = 20, master_seed: int = MASTER_SEED
+def run_replicates(
+    plantilla: ScenarioSpec,
+    base_cfg: SimConfig,
+    est: EstimationConfig,
+    n_reps: int = 20,
+    master_seed: int = MASTER_SEED,
+    prefijo: str = "rep",
 ) -> pd.DataFrame:
-    """Corre el escenario nulo con ``n_reps`` semillas distintas."""
+    """Repite un escenario con ``n_reps`` semillas distintas.
+
+    Cada replica es una **economia independiente**: trayectoria de precios nueva
+    y poblacion nueva. Sirve para dos cosas: medir la tasa de rechazo empirica
+    bajo el nulo y medir la variabilidad **entre trayectorias**, que el bootstrap
+    por cuenta (condicionado a una sola trayectoria) no puede ver.
+    """
     rows = []
     for i in range(n_reps):
-        spec = ScenarioSpec(f"nulo_rep_{i:02d}", 1, f"nulo replica {i}", 0.0, "point", 0.0, "point",
-                            None, "nulo")
+        spec = replace(plantilla, key=f"{prefijo}_{i:02d}", name=f"{plantilla.name} replica {i}")
         an, _ = run_scenario(spec, base_cfg, est, master_seed, full_diagnostics=False)
         od = an["odean"]["PGR_menos_PLR"]
         hz = an["hazard"]["delta_hat"]
         rows.append({
             "replica": i,
+            "delta_inyectado": an["delta_inyectado_media"],
             "PGR": an["odean"]["PGR"]["estimate"],
             "PLR": an["odean"]["PLR"]["estimate"],
             "PGR_menos_PLR": od["estimate"],
@@ -420,8 +431,35 @@ def run_null_replicates(
             "p_beta_net": an["reg_net"]["p"],
             "rechaza_beta_net_5pct": bool(an["reg_net"]["p"] < 0.05),
             "turnover_medio": an["turnover_mean"],
+            "error_recuperacion": an["error_recuperacion"],
         })
     return pd.DataFrame(rows)
+
+
+def run_null_replicates(
+    base_cfg: SimConfig, est: EstimationConfig, n_reps: int = 20, master_seed: int = MASTER_SEED
+) -> pd.DataFrame:
+    """Replicas del escenario nulo con semillas distintas."""
+    return run_replicates(SCENARIO_BY_KEY["esc1_nulo"], base_cfg, est, n_reps, master_seed, "nulo_rep")
+
+
+def replicate_summary(df: pd.DataFrame, columna: str, columna_se: str) -> Dict[str, float]:
+    """Compara la dispersion ENTRE trayectorias contra el error estandar bootstrap.
+
+    El bootstrap agrupado por cuenta esta condicionado a una unica realizacion
+    del mercado. Si la dispersion entre trayectorias supera al error estandar
+    bootstrap, los estadisticos z de una sola corrida estan inflados y hay que
+    decirlo.
+    """
+    sd_entre = float(df[columna].std(ddof=1))
+    se_medio = float(df[columna_se].mean())
+    return {
+        "media": float(df[columna].mean()),
+        "sd_entre_trayectorias": sd_entre,
+        "se_bootstrap_medio": se_medio,
+        "factor_sd_sobre_se": sd_entre / se_medio if se_medio > 0 else np.nan,
+        "n_replicas": int(len(df)),
+    }
 
 
 # ---------------------------------------------------------------------------

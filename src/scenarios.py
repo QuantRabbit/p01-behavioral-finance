@@ -161,6 +161,12 @@ def analyze(
         "gross_return_comp_mean": float(a["gross_return_comp"].mean()),
         "median_holding_winners": float(np.nanmedian(a["median_holding_winners"])),
         "median_holding_losers": float(np.nanmedian(a["median_holding_losers"])),
+        "mean_holding_winners": float(np.nanmean(a["mean_holding_winners"])),
+        "mean_holding_losers": float(np.nanmean(a["mean_holding_losers"])),
+        "brecha_tenencia": float(
+            np.nanmedian(a["median_holding_winners"]) - np.nanmedian(a["median_holding_losers"])
+        ),
+        "market_return_ew": float(result.market.equal_weight_index()[-1] / 100.0 - 1.0),
         "trade_count_mean": float(a["trade_count"].mean()),
         "num_lots_opened_mean": float(a["num_lots_opened"].mean()),
     }
@@ -279,6 +285,9 @@ def main_table_row(an: Dict[str, object]) -> Dict[str, object]:
         "corr_kappa_turnover": ind["corr_kappa_turnover"],
         "turnover_medio": an["turnover_mean"],
         "retorno_neto_medio": an["net_return_mean"],
+        "retorno_mercado_ew": an["market_return_ew"],
+        "tenencia_ganadoras": an["median_holding_winners"],
+        "tenencia_perdedoras": an["median_holding_losers"],
     }
 
 
@@ -432,6 +441,10 @@ def run_replicates(
             "rechaza_beta_net_5pct": bool(an["reg_net"]["p"] < 0.05),
             "turnover_medio": an["turnover_mean"],
             "error_recuperacion": an["error_recuperacion"],
+            "retorno_mercado_ew": an["market_return_ew"],
+            "tenencia_ganadoras": an["median_holding_winners"],
+            "tenencia_perdedoras": an["median_holding_losers"],
+            "brecha_tenencia": an["brecha_tenencia"],
         })
     return pd.DataFrame(rows)
 

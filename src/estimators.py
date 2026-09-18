@@ -333,3 +333,19 @@ def correlation_or_nd(x: np.ndarray, y: np.ndarray) -> Optional[float]:
     if np.std(x) <= 0 or np.std(y) <= 0:
         return None
     return float(np.corrcoef(x, y)[0, 1])
+
+
+def odean_bootstrap_draws(
+    accounts: pd.DataFrame, n_boot: int, rng: np.random.Generator
+) -> Dict[str, np.ndarray]:
+    """Replicas crudas del bootstrap agrupado por cuenta (para graficar)."""
+    mat = accounts[list(ODEAN_COLS)].to_numpy(dtype=float)
+    return odean_point(cluster_bootstrap_sums(mat, n_boot, rng))
+
+
+def hazard_bootstrap_draws(
+    accounts: pd.DataFrame, n_boot: int, rng: np.random.Generator
+) -> Dict[str, np.ndarray]:
+    """Replicas crudas del bootstrap del estimador estructural (para graficar)."""
+    mat = accounts[list(HAZARD_COLS)].to_numpy(dtype=float)
+    return hazard_point(cluster_bootstrap_sums(mat, n_boot, rng))

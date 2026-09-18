@@ -349,3 +349,41 @@ def signature_distances(matrix: pd.DataFrame) -> pd.DataFrame:
         for j in range(len(names)):
             out[i, j] = float(np.sqrt(np.nansum((vals[i] - vals[j]) ** 2)))
     return pd.DataFrame(out, index=names, columns=names)
+
+
+def classify_by_signature(
+    row: pd.Series, reference: pd.DataFrame, min_norm: float = 0.25
+) -> Dict[str, object]:
+    """Clasifica una firma por DIRECCION (coseno), no por magnitud.
+
+    La distancia euclidiana cruda mezcla dos cosas distintas: *que* mecanismo
+    opera (la direccion del vector de log-razones) y *con que intensidad* lo
+    hace (su norma). Un agente con ``delta = 0.3`` deja la misma firma
+    direccional que uno con ``delta = 0.8``, solo que mas debil; con distancia
+    euclidiana el primero puede quedar mas cerca de una firma de referencia
+    equivocada solo por tener menor norma.
+
+    Si la norma de la firma esta por debajo de ``min_norm`` no hay mecanismo
+    detectable y se dice asi, en vez de forzar una etiqueta sobre ruido.
+    """
+    v = np.array([row[c] for c in CELL_NAMES], dtype=float)
+    v = np.where(np.isfinite(v), v, 0.0)
+    norma = float(np.linalg.norm(v))
+    if norma < min_norm:
+        return {"mecanismo": "sin mecanismo detectable", "coseno": np.nan,
+                "norma": norma, "segundo": None, "coseno_segundo": np.nan}
+    cosenos = {}
+    for name, ref in reference.iterrows():
+        w = np.array([ref[c] for c in CELL_NAMES], dtype=float)
+        w = np.where(np.isfinite(w), w, 0.0)
+        nw = float(np.linalg.norm(w))
+        cosenos[name] = float(v @ w / (norma * nw)) if nw > 0 else np.nan
+    orden = sorted(cosenos, key=lambda k: -cosenos[k])
+    return {
+        "mecanismo": orden[0],
+        "coseno": cosenos[orden[0]],
+        "norma": norma,
+        "segundo": orden[1] if len(orden) > 1 else None,
+        "coseno_segundo": cosenos[orden[1]] if len(orden) > 1 else np.nan,
+        "todos": cosenos,
+    }

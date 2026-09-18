@@ -40,6 +40,7 @@ from src.config import (
     derive_rngs,
 )
 from src.diagnostics import (
+    classify_by_signature,
     match_a_priori,
     nearest_reference,
     pattern_str,
@@ -55,7 +56,9 @@ from src.scenarios import (
     main_table_row,
     make_config,
     run_accounting_grid,
+    replicate_summary,
     run_null_replicates,
+    run_replicates,
     run_scenario,
     run_sweep,
     save_json,
@@ -87,6 +90,8 @@ def build_parser() -> argparse.ArgumentParser:
                    choices=["partial_as_full", "partial_as_fraction"])
     p.add_argument("--reference", default="mid", choices=["mid", "ask_paid"])
     p.add_argument("--null-reps", type=int, default=20, help="replicas del escenario nulo")
+    p.add_argument("--disp-reps", type=int, default=10,
+                   help="replicas del escenario de disposicion alta (variabilidad entre trayectorias)")
     p.add_argument("--outdir", default="outputs", help="directorio de salida")
     p.add_argument("--all", action="store_true", help="corre todo: escenarios, barridos, replicas y figuras")
     p.add_argument("--scenarios-only", action="store_true", help="solo los 9 escenarios")
@@ -118,7 +123,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if args.quick:
         args.agents, args.days, args.assets = 250, 120, 30
-        args.bootstrap, args.placebo, args.null_reps = 200, 50, 4
+        args.bootstrap, args.placebo, args.null_reps, args.disp_reps = 200, 50, 4, 3
     outdir = Path(args.outdir)
     figdir = outdir / "figuras"
     outdir.mkdir(parents=True, exist_ok=True)
@@ -173,14 +178,17 @@ def main(argv=None) -> int:
     clasificacion = []
     for nombre, fila in firmas.iterrows():
         vecino = nearest_reference(fila, referencia)
+        coseno = classify_by_signature(fila, referencia)
         clasificacion.append({
             "escenario": nombre,
             "patron": pattern_str(fila),
             "coincide_pre_analisis": match_a_priori(fila) or "ninguno",
-            "firma_mas_cercana": vecino["mas_cercano"],
+            "mecanismo_por_direccion": coseno["mecanismo"],
+            "coseno": coseno["coseno"],
+            "coseno_segundo": coseno["coseno_segundo"],
+            "intensidad_norma": coseno["norma"],
+            "firma_mas_cercana_euclidiana": vecino["mas_cercano"],
             "distancia": vecino["distancia"],
-            "segunda": vecino["segundo"],
-            "distancia_segunda": vecino["distancia_segundo"],
         })
     save_table(pd.DataFrame(clasificacion), outdir / "clasificacion_firmas")
 
@@ -195,8 +203,10 @@ def main(argv=None) -> int:
 
     sweep = pd.DataFrame()
     nulos = pd.DataFrame()
+    disp_reps = pd.DataFrame()
     grid = pd.DataFrame()
     monot = []
+    resumen_reps = {}
 
     if correr_todo:
         # --------------------------------------------------------------
@@ -223,6 +233,26 @@ def main(argv=None) -> int:
         log(f"  tasa de rechazo de PGR-PLR al 5%: {tasa:.2%} "
             f"(nominal 5%), delta_hat: {nulos['rechaza_delta_5pct'].mean():.2%}, "
             f"beta_net: {nulos['rechaza_beta_net_5pct'].mean():.2%}")
+
+        # --------------------------------------------------------------
+        # 5b) Replicas del escenario 3: variabilidad ENTRE trayectorias
+        # --------------------------------------------------------------
+        log(f"Replicas del escenario de disposicion alta ({args.disp_reps} semillas)...")
+        disp_reps = run_replicates(SCENARIO_BY_KEY["esc3_disposicion_alta"], cfg, est,
+                                   args.disp_reps, args.seed, "disp_rep")
+        save_table(disp_reps, outdir / "replicas_disposicion_alta", floatfmt="{:.5f}")
+        resumen_reps = {
+            "nulo_PGR_menos_PLR": replicate_summary(nulos, "PGR_menos_PLR", "SE"),
+            "nulo_delta_hat": replicate_summary(nulos, "delta_hat", "SE_delta_hat"),
+            "disp_PGR_menos_PLR": replicate_summary(disp_reps, "PGR_menos_PLR", "SE"),
+            "disp_delta_hat": replicate_summary(disp_reps, "delta_hat", "SE_delta_hat"),
+        }
+        for k, v in resumen_reps.items():
+            log(f"  {k}: sd entre trayectorias {v['sd_entre_trayectorias']:.5f} vs "
+                f"SE bootstrap {v['se_bootstrap_medio']:.5f} (factor {v['factor_sd_sobre_se']:.2f})")
+        log(f"  error de recuperacion de delta en las replicas: "
+            f"media {disp_reps['error_recuperacion'].mean():+.5f}, "
+            f"max |.| {disp_reps['error_recuperacion'].abs().max():.5f}")
 
         # --------------------------------------------------------------
         # 6) Sensibilidad contable sobre el escenario 3
@@ -260,6 +290,8 @@ def main(argv=None) -> int:
         "clasificacion_firmas": clasificacion,
         "barrido": sweep.to_dict(orient="records") if len(sweep) else [],
         "replicas_nulo": nulos.to_dict(orient="records") if len(nulos) else [],
+        "replicas_disposicion_alta": disp_reps.to_dict(orient="records") if len(disp_reps) else [],
+        "resumen_replicas": resumen_reps,
         "sensibilidad_contable": grid.to_dict(orient="records") if len(grid) else [],
     }
     save_json(completo, outdir / "resultados_completos.json")

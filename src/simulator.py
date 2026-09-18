@@ -505,6 +505,12 @@ def run_simulation(
         "portfolio_vol": port_vol,
         "hhi": sum_hhi / max(n_value_obs, 1),
         "costs_paid": costs_paid_total,
+        "volume_mid": volume_mid,
+        "mean_portfolio_value": mean_value,
+        # Descomposicion exacta del costo: el spread es proporcional al volumen
+        # negociado y la comision es fija por orden.
+        "spread_cost": volume_mid * cfg.costs.half_spread,
+        "commission_cost": trade_count * cfg.costs.commission,
         "G_r": g_r, "G_p": g_p, "L_r": l_r, "L_p": l_p,
         "position_days_in_gain": days_gain,
         "position_days_in_loss": days_loss,
@@ -534,6 +540,16 @@ def run_simulation(
         "mean_lots_per_buy_merged": float(state.merge_events) / max(float(lots_opened.sum()), 1.0),
         "gross_minus_net_equals_costs": float(
             np.max(np.abs((final_gross - final_net) - costs_paid_total) / np.maximum(w0, 1.0))
+        ),
+        "cost_decomposition_error": float(
+            np.max(
+                np.abs(
+                    volume_mid * cfg.costs.half_spread
+                    + trade_count * cfg.costs.commission
+                    - costs_paid_total
+                )
+                / np.maximum(w0, 1.0)
+            )
         ),
         "runtime_days": float(t_total),
     }

@@ -30,8 +30,8 @@ import numpy as np
 # --------------------------------------------------------------------------
 # Metadatos academicos
 # --------------------------------------------------------------------------
-STUDENT_NAME = "[TU NOMBRE]"
-PROFESSOR_NAME = "[NOMBRE DEL PROFESOR]"
+STUDENT_NAME = "Juan Pablo Sánchez, Matteo Nelson, Edgardo González"
+PROFESSOR_NAME = "Prof. Luis Felipe Gómez Estrada"
 COURSE = "Comportamiento en las Finanzas y Toma de Decisiones"
 INSTITUTION = "ITESO, Universidad Jesuita de Guadalajara"
 PROJECT = "P01 - Simulador de finanzas conductuales con ground truth"

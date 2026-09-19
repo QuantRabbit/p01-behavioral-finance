@@ -4,8 +4,8 @@
 
 - Materia: Comportamiento en las Finanzas y Toma de Decisiones
 - Institución: ITESO, Universidad Jesuita de Guadalajara
-- Alumno: [TU NOMBRE]
-- Profesor: [NOMBRE DEL PROFESOR]
+- Alumno: Juan Pablo Sánchez, Matteo Nelson, Edgardo González
+- Profesor: Prof. Luis Felipe Gómez Estrada
 - **Fecha de redacción: 18 de septiembre de 2026**
 
 > Este documento se escribe y se registra en git **antes** de ejecutar un solo

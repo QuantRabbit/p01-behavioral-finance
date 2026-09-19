@@ -12,7 +12,7 @@ modo que la pregunta deja de ser *¿existe el efecto disposición?* y pasa a ser
 - Registro previo: [`PRE_ANALISIS.md`](PRE_ANALISIS.md) (commit `2d5dfc9`, anterior a cualquier resultado)
 - Cuaderno ejecutado: [`notebooks/P01_Analisis.ipynb`](notebooks/P01_Analisis.ipynb)
 
-> **Antes de entregar:** reemplaza `[TU NOMBRE]` y `[NOMBRE DEL PROFESOR]` en
+> **Antes de entregar:** reemplaza `Juan Pablo Sánchez, Matteo Nelson, Edgardo González` y `Prof. Luis Felipe Gómez Estrada` en
 > `REPORTE.md`, `PRE_ANALISIS.md` y `src/config.py` (constantes `STUDENT_NAME` y
 > `PROFESSOR_NAME`).
 

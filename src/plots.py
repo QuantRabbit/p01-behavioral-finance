@@ -46,6 +46,7 @@ def _style(ax, titulo: str, xlabel: str, ylabel: str) -> None:
 def _save(fig, outdir: Path, nombre: str) -> Path:
     outdir.mkdir(parents=True, exist_ok=True)
     ruta = outdir / nombre
+    fig.tight_layout()
     fig.savefig(ruta, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
     return ruta
@@ -67,8 +68,6 @@ def fig_precios(cfg, semilla: int, outdir: Path) -> Path:
     ax2.plot(dias, market.equal_weight_index(), color=COLOR_A, linewidth=1.6)
     ax2.axhline(100.0, color=COLOR_GRIS, linestyle="--", linewidth=0.8)
     _style(ax2, "Indice equiponderado del mercado", "dia habil", "nivel (base 100)")
-    fig.suptitle("Mercado multifactorial: retornos i.i.d. en el tiempo, correlacion transversal positiva",
-                 fontsize=10.5)
     return _save(fig, outdir, "fig01_trayectorias_precios.png")
 
 
@@ -88,7 +87,6 @@ def fig_delta_kappa(cuentas: pd.DataFrame, outdir: Path) -> Path:
            r"$\kappa_i$", "cuentas")
     axes[2].scatter(d, k, s=6, alpha=0.35, color=COLOR_C, edgecolors="none")
     _style(axes[2], f"Independencia por construccion\nCorr = {corr:+.4f}", r"$\delta_i$", r"$\kappa_i$")
-    fig.suptitle("Los parametros inyectados son distribuciones, no escalares", fontsize=10.5)
     return _save(fig, outdir, "fig02_distribucion_delta_kappa.png")
 
 

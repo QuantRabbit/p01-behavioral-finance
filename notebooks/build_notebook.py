@@ -15,11 +15,10 @@ MD = "markdown"
 CODE = "code"
 
 CELLS = [
-(MD, r"""# P01 — Simulador de finanzas conductuales con *ground truth*
+(MD, r"""# P01 - Simulador de finanzas conductuales con *ground truth*
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
 
-**Comportamiento en las Finanzas y Toma de Decisiones (ITESO)**  
 **Alumnos:** Juan Pablo Sánchez, Matteo Nelson, Edgardo González  
 **Profesor:** Prof. Luis Felipe Gómez Estrada  
 

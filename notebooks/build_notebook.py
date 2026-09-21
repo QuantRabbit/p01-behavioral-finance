@@ -17,7 +17,11 @@ CODE = "code"
 CELLS = [
 (MD, r"""# P01 — Simulador de finanzas conductuales con *ground truth*
 
-**Comportamiento en las Finanzas y Toma de Decisiones — ITESO**
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
+
+**Comportamiento en las Finanzas y Toma de Decisiones (ITESO)**  
+**Alumnos:** Juan Pablo Sánchez, Matteo Nelson, Edgardo González  
+**Profesor:** Prof. Luis Felipe Gómez Estrada  
 
 Este cuaderno recorre los resultados de `outputs/`, generados por
 
@@ -31,6 +35,8 @@ comportamiento se inyectan, se conocen; todo desacuerdo entre lo inyectado y lo
 estimado es un resultado, no un defecto."""),
 
 (CODE, r"""import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,8 +44,17 @@ import numpy as np
 import pandas as pd
 from IPython.display import Image, display
 
+# Compatibilidad con Google Colab: clona el repositorio si se ejecuta en la nube
 ROOT = Path.cwd()
-if not (ROOT / "outputs").exists():
+if not (ROOT / "outputs").exists() and not (ROOT.parent / "outputs").exists():
+    if "google.colab" in sys.modules or not (ROOT / "outputs").exists():
+        print("Entorno Google Colab detectado. Clonando repositorio para acceder a outputs...")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/QuantRabbit/p01-behavioral-finance.git"], check=False)
+        if (ROOT / "p01-behavioral-finance" / "outputs").exists():
+            os.chdir("p01-behavioral-finance")
+            ROOT = Path.cwd()
+
+if not (ROOT / "outputs").exists() and (ROOT.parent / "outputs").exists():
     ROOT = ROOT.parent
 sys.path.insert(0, str(ROOT))
 OUT = ROOT / "outputs"

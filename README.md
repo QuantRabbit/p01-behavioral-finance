@@ -13,7 +13,18 @@ modo que la pregunta deja de ser *¿existe el efecto disposición?* y pasa a ser
 - Reporte completo: [`REPORTE.md`](REPORTE.md)
 - Registro previo: [`PRE_ANALISIS.md`](PRE_ANALISIS.md) (commit `2d5dfc9`, anterior a cualquier resultado)
 - Cuaderno ejecutado: [`notebooks/P01_Analisis.ipynb`](notebooks/P01_Analisis.ipynb)
+- Ejecutar en la nube: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
 
+---
+
+## Ejecución interactiva en Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
+
+Para abrir y recorrer el cuaderno completo de análisis en el navegador sin requerir instalación local:
+1. Clic en el botón superior **Open in Colab**.
+2. En el menú de Colab, presionar **Entorno de ejecución → Ejecutar todas** (*Runtime → Run all*).
+3. El cuaderno se autoconfigura, cargando los resultados de `outputs/` y visualizando las tablas y las diez figuras analíticas.
 
 ---
 

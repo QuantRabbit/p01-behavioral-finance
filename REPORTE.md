@@ -11,7 +11,7 @@
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Resumen
 
 Construimos un mercado sintético de 60 activos y 504 días hábiles con 1000 agentes cuyos sesgos conductuales son parámetros que inyectamos y por lo tanto conocemos, corrimos sobre él los estimadores estándar de la literatura y comparamos lo estimado contra lo inyectado. Tres resultados.
 

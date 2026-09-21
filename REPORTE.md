@@ -6,17 +6,19 @@
 - **Institución:** ITESO, Universidad Jesuita de Guadalajara
 - **Alumnos:** Juan Pablo Sánchez, Matteo Nelson, Edgardo González
 - **Profesor:** Prof. Luis Felipe Gómez Estrada
-- **Fecha:** 18 de septiembre de 2026
+- **Fecha de Entrega:** 21 de septiembre de 2026
+- **Repositorio de Código:** [github.com/QuantRabbit/p01-behavioral-finance](https://github.com/QuantRabbit/p01-behavioral-finance)
+- **Cuaderno Interactivo:** [Ejecutar en Google Colab](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Construí un mercado sintético de 60 activos y 504 días hábiles con 1000 agentes cuyos sesgos conductuales son parámetros que yo inyecto y por lo tanto conozco, corrí sobre él los estimadores estándar de la literatura y comparé lo estimado contra lo inyectado. Tres resultados.
+Construimos un mercado sintético de 60 activos y 504 días hábiles con 1000 agentes cuyos sesgos conductuales son parámetros que inyectamos y por lo tanto conocemos, corrimos sobre él los estimadores estándar de la literatura y comparamos lo estimado contra lo inyectado. Tres resultados.
 
 **Primero: el estimador clásico de Odean no estima el parámetro; el estructural sí.** El estimador por razón de tasas de riesgo recupera `δ` con error absoluto máximo de **0.014** en los siete escenarios sin *confound*, típicamente menor a 0.003. En cambio `PGR − PLR` cambia **+53%** entre dos escenarios con **exactamente el mismo `δ` inyectado** (0.800 y 0.799) que sólo difieren en la propensión a operar: 0.0971 contra 0.1490. La medida publicada del efecto disposición no es comparable entre poblaciones con distinta rotación. La razón `PGR/PLR` va en la dirección correcta pero subestima la razón de hazards verdadera hasta **−24%**.
 
-**Segundo: los errores estándar de `PGR − PLR` están mal por un factor de ~35, incluso haciéndolos "bien".** Ignorar el agrupamiento por cuenta los subestima 2.1×, como advierte la literatura. Pero medí algo que casi nunca se mide: la dispersión del estimador **entre trayectorias de mercado independientes**. En el escenario de disposición alta esa dispersión es **16.6 veces** el error estándar bootstrap agrupado por cuenta, que está condicionado a una sola realización del mercado y es ciego a esa variación. El `z = 91` de mi tabla es condicional; el incondicional es del orden de 2.6. Para `δ̂` el mismo factor es 1.12: sus estadísticos sí son honestos.
+**Segundo: los errores estándar de `PGR − PLR` están mal por un factor de ~35, incluso haciéndolos "bien".** Ignorar el agrupamiento por cuenta los subestima 2.1×, como advierte la literatura. Pero medimos algo que casi nunca se mide: la dispersión del estimador **entre trayectorias de mercado independientes**. En el escenario de disposición alta esa dispersión es **16.6 veces** el error estándar bootstrap agrupado por cuenta, que está condicionado a una sola realización del mercado y es ciego a esa variación. El `z = 91` de nuestra tabla es condicional; el incondicional es del orden de 2.6. Para `δ̂` el mismo factor es 1.12: sus estadísticos sí son honestos.
 
 **Tercero: `PGR − PLR` no separa mecanismos, pero tres celdas discriminantes sí.** Los escenarios 3 (disposición), 7 (rebalanceo) y 8 (reversión) dan los tres un `PGR − PLR` positivo y significativo, los dos últimos con `δ = 0` inyectado, y son indistinguibles con ese estimador; con el vector de tres tasas de venta condicionales quedan perfectamente separados, con coseno ≥ 0.97 con la firma correcta y ≤ 0.02 con la siguiente. Como subproducto, el estadístico de horizontes de tenencia de Odean (1998) resulta arrastrado por la deriva del mercado: sobre 20 réplicas del nulo con `δ = 0`, su correlación con el retorno realizado es **+0.797 (t = 5.60)** y en **7 de 20** trayectorias la brecha tiene el signo que se lee como "efecto disposición".
 
@@ -42,7 +44,7 @@ r_{m,t} = (μ_m − ½σ_m²)·Δt + β_{m,1}·F_{1,t} + β_{m,2}·F_{2,t} + β_
 
 `F₁` es el factor de mercado (μ = 8%, σ = 16% anuales), `F₂` uno sectorial (σ = 12%) y `F₃` un segundo factor de estilo ortogonal (σ = 8%). Las betas se sortean uniformes en `[0.65, 1.35]`, `[−0.6, 0.6]` y `[−0.4, 0.4]`; la volatilidad idiosincrática en `[12%, 28%]`; los precios iniciales en `[25, 150]`. La corrección de Itô usa la varianza **total** del activo, de modo que la deriva del retorno simple quede en `β₁·μ_mercado`.
 
-El modelo de factores es superior al GBM independiente porque genera correlación transversal realista —**0.322** de correlación media entre activos— y con ella riesgo no diversificable: sin ese riesgo el control de volatilidad de Barber-Odean sería ruido, y con él resulta decisivo para diagnosticar el escenario 7. Los factores y el ruido son i.i.d. en el tiempo, así que **no hay momentum ni reversión real**: la autocorrelación agrupada en los rezagos 1 a 10 cae dentro de la banda nula por permutación temporal conjunta, con máximo de |0.011|. Eso convierte al escenario 8 en un *confound* genuino.
+El modelo de factores es superior al GBM independiente porque genera correlación transversal realista (con 0.322 de correlación media entre activos) y con ella riesgo no diversificable: sin ese riesgo el control de volatilidad de Barber-Odean sería ruido, y con él resulta decisivo para diagnosticar el escenario 7. Los factores y el ruido son i.i.d. en el tiempo, así que **no hay momentum ni reversión real**: la autocorrelación agrupada en los rezagos 1 a 10 cae dentro de la banda nula por permutación temporal conjunta, con máximo de |0.011|. Eso convierte al escenario 8 en un *confound* genuino.
 
 Cada escenario genera su **propia** trayectoria: es una economía independiente. Eso impide que una sola realización afortunada gobierne las conclusiones, pero implica que los niveles de retorno no son comparables entre escenarios; las trayectorias van de −19.0% a +104.8% a dos años.
 
@@ -63,7 +65,7 @@ h_neutral = h_0
 
 ### 3.3 Distribuciones, no escalares
 
-Con objetivo distinto de cero, `δ_i` y `κ_i` se sortean de una Beta reparametrizada por media y concentración (`a = m·ν`, `b = (1−m)·ν`, `ν = 20`) desde **dos flujos independientes**. Con objetivo cero se usa el valor exacto 0 para todos, porque la ausencia del sesgo es el punto del escenario, y la consecuencia —que la correlación no esté definida— se reporta como `n/d`, nunca como `0.0000`.
+Con objetivo distinto de cero, `δ_i` y `κ_i` se sortean de una Beta reparametrizada por media y concentración (`a = m·ν`, `b = (1−m)·ν`, `ν = 20`) desde **dos flujos independientes**. Con objetivo cero se usa el valor exacto 0 para todos, porque la ausencia del sesgo es el punto del escenario, y la consecuencia (que la correlación no esté definida) se reporta como `n/d`, nunca como `0.0000`.
 
 ![Distribución de delta y kappa](outputs/figuras/fig02_distribucion_delta_kappa.png)
 
@@ -73,7 +75,7 @@ Comisión fija de **$1.00 USD por orden** y spread bid-ask total de **10 puntos 
 
 Dentro del mismo bucle corren dos libros con las mismas decisiones, fechas, activos y cantidades en unidades: el **neto** (bid/ask con comisión) y el **bruto** (precio medio, sin comisión). Así `r_gross − r_net` es exactamente el costo acumulado y `β_gross` queda limpio de la definición de costos. La identidad se verifica con error máximo de **4.3e-15** y la conservación de valor (`efectivo + posiciones + costos = riqueza inicial + P&L de mercado`) con **4.1e-15**, nueve órdenes de magnitud bajo la tolerancia pedida.
 
-Como el libro bruto conserva las cantidades en unidades, el efectivo que ahorra queda ocioso; por eso reporto además `gross_return_comp`, el retorno bruto capitalizado por composición diaria de los costos, cuya diferencia con el anterior es de segundo orden.
+Como el libro bruto conserva las cantidades en unidades, el efectivo que ahorra queda ocioso; por eso reportamos además `gross_return_comp`, el retorno bruto capitalizado por composición diaria de los costos, cuya diferencia con el anterior es de segundo orden.
 
 ---
 
@@ -107,7 +109,7 @@ Rejilla completa sobre el escenario 3 (`δ = 0.80` inyectado), con la misma tray
 
 `PGR − PLR` va de **0.0558 a 0.0976**: un rango relativo del **75%** producido íntegramente por convenciones que casi ningún paper declara. El estimador estructural va de 0.79929 a 0.79969: **0.05%**. El conteo de ventas parciales explica −31% del rango y la base de costo otro −17%, y son aproximadamente separables.
 
-La referencia `ask_paid` casi no mueve nada (+0.00023). **Ésa es una predicción del pre-análisis que falló**: anticipé un efecto apreciable, y el mecanismo era correcto pero la magnitud no, porque 5 bps de sesgo son despreciables frente a un movimiento diario típico de ~1.6%. Para ubicar la frontera repetí la rejilla con un spread de mercado ilíquido (200 bps): el efecto sube a **+0.00531**, escalando casi linealmente con el spread. La elección de referencia importa en activos ilíquidos y no en líquidos, que es más informativo que mi predicción original.
+La referencia `ask_paid` casi no mueve nada (+0.00023). **Ésa es una predicción del pre-análisis que falló**: anticipé un efecto apreciable, y el mecanismo era correcto pero la magnitud no, porque 5 bps de sesgo son despreciables frente a un movimiento diario típico de ~1.6%. Para ubicar la frontera repetí la rejilla con un spread de mercado ilíquido (200 bps): el efecto sube a **+0.00531**, escalando casi linealmente con el spread. La elección de referencia importa en activos ilíquidos y no en líquidos, que es más informativo que nuestra predicción original.
 
 ![Sensibilidad contable](outputs/figuras/fig10_sensibilidad_contable.png)
 
@@ -175,7 +177,7 @@ Nueve filas. Tablas completas en `outputs/tabla_principal.md` y `outputs/tabla_d
 
 En `κ ∈ {0, …, 0.8}` con `δ = 0`, el turnover crece monótonamente (3.05 → 11.28) y el estimador de disposición se queda callado en todos los puntos (`|δ̂| ≤ 0.0021`): **silencio cruzado confirmado**. Pero `β_net` resultó **no monótona**: 0.0033, −0.0030, −0.0032, −0.0019, −0.0030, ninguna significativa. Es la segunda predicción del pre-análisis que falla, y la explicación es instructiva: `β` es una **pendiente**, el costo por unidad de turnover, no el costo total. La estructura de costos no cambia con `κ`, así que la pendiente no tiene por qué volverse más negativa; lo que crece es el turnover y con él el efecto total `β·τ`. Confundí el nivel con la pendiente al registrar la predicción. La lectura correcta es que **el coeficiente de Barber-Odean mide qué tan caro es operar, no qué tan sobreconfiada es la población.**
 
-**Errores estándar, agrupados y no agrupados.** En el escenario 3 el bootstrap agrupado por cuenta da `SE = 0.001063` (z = 91.4) y el bootstrap por transacción, incorrecto a propósito, `SE = 0.000502` (z = 193.3): factor de subestimación **2.12×**, cuantificado con mis datos en vez de citado. Pero hay un factor mucho mayor que casi nadie reporta: en 10 réplicas del escenario 3 con trayectorias independientes, la desviación estándar de `PGR − PLR` entre trayectorias es 0.01644 contra un error estándar bootstrap medio de 0.00099, **factor 16.6**. Bajo el nulo ese factor es 0.91 y para `δ̂` es 1.12. El bootstrap por cuenta está condicionado a una sola realización del mercado, y `PGR − PLR` depende fuertemente de cuánta dispersión y deriva tuvo esa realización, mientras que `δ̂` no. Combinando ambos factores, el `z = 91.5` de la tabla debería leerse como `z ≈ 2.6` para una inferencia incondicional. **No reporto estadísticos z de tres cifras sin cuestionarlos: los cuestiono con datos y resultan inflados unas 35 veces.**
+**Errores estándar, agrupados y no agrupados.** En el escenario 3 el bootstrap agrupado por cuenta da `SE = 0.001063` (z = 91.4) y el bootstrap por transacción, incorrecto a propósito, `SE = 0.000502` (z = 193.3): factor de subestimación **2.12×**, cuantificado con nuestros datos en vez de citado. Pero hay un factor mucho mayor que casi nadie reporta: en 10 réplicas del escenario 3 con trayectorias independientes, la desviación estándar de `PGR − PLR` entre trayectorias es 0.01644 contra un error estándar bootstrap medio de 0.00099, **factor 16.6**. Bajo el nulo ese factor es 0.91 y para `δ̂` es 1.12. El bootstrap por cuenta está condicionado a una sola realización del mercado, y `PGR − PLR` depende fuertemente de cuánta dispersión y deriva tuvo esa realización, mientras que `δ̂` no. Combinando ambos factores, el `z = 91.5` de la tabla debería leerse como `z ≈ 2.6` para una inferencia incondicional. **No reportamos estadísticos z de tres cifras sin cuestionarlos: los cuestionamos con datos y resultan inflados unas 35 veces.**
 
 **Placebo de permutación.** Permutando el turnover entre cuentas 200 veces la pendiente colapsa: media −0.00002 con banda al 95% de `[−0.0017, +0.0014]` en el escenario 9, con el `β` observado de −0.00263 fuera de la banda. En el nulo el observado cae **dentro**, como debe.
 
@@ -193,7 +195,7 @@ En `κ ∈ {0, …, 0.8}` con `δ = 0`, el turnover crece monótonamente (3.05 �
 
 **Escenario 5 (rotación alta).** Disposición callada (`δ̂ = −0.0003`), `β_net = −0.0059` (p = 0.044) y `β_IV = −0.0063` con `F = 1534`. Caso de libro: todo el efecto es costo.
 
-**Escenario 6 (ambos activos).** El resultado más importante. `δ` inyectado es 0.799, prácticamente idéntico al 0.800 del escenario 3, y `δ̂ = 0.8015` cambia **+0.26%**; pero `PGR − PLR` salta de 0.0971 a 0.1490, **+53%**, porque `PGR − PLR ≈ 2·δ·h₀` y `h₀` pasa de 0.015 a 0.063 al subir `κ`. La magnitud publicada del efecto disposición no es un parámetro de preferencias sino un producto de preferencias por frecuencia de operación. (Mi predicción registrada decía "cuatro veces mayor"; el factor real es 1.53, porque condicionar en días con venta comprime `PGR`.)
+**Escenario 6 (ambos activos).** El resultado más importante. `δ` inyectado es 0.799, prácticamente idéntico al 0.800 del escenario 3, y `δ̂ = 0.8015` cambia **+0.26%**; pero `PGR − PLR` salta de 0.0971 a 0.1490, **+53%**, porque `PGR − PLR ≈ 2·δ·h₀` y `h₀` pasa de 0.015 a 0.063 al subir `κ`. La magnitud publicada del efecto disposición no es un parámetro de preferencias sino un producto de preferencias por frecuencia de operación. (Nuestra predicción registrada decía "cuatro veces mayor"; el factor real es 1.53, porque condicionar en días con venta comprime `PGR`.)
 
 Aquí sí hay instrumento: `β_OLS^gross = +0.0066` (t = 2.91) contra `β_IV^gross = −0.0081`, una brecha de **+0.0147** que es la magnitud de la causalidad reversa, medida y no argumentada. En neto, `β_OLS = +0.0028` (no significativa) contra `β_IV = −0.0120` (t = −2.20): la OLS dice que operar no hace daño, el IV dice que sí. `F = 175`.
 
@@ -227,7 +229,7 @@ Los cuatro puntos del enunciado, con los números de la tabla principal.
 
 ## 10. Confounds y separabilidad
 
-`PGR − PLR` no separa disposición, rebalanceo y creencia en reversión porque las tres reglas venden ganadoras: los tres escenarios dan positivo y significativo, +0.0971 (z = 91), +0.0124 (z = 18) y +0.0409 (z = 90). Un investigador con sólo este estimador concluiría "efecto disposición" tres veces y se equivocaría dos. Pero los tres mecanismos **condicionan en variables distintas** —precio de compra, peso relativo, retorno reciente—, así que construí tres particiones de los días-posición donde hacen predicciones opuestas y estimé la tasa de venta condicional en cada una, con intervalo bootstrap por cuenta, reportando la log-razón contra la tasa base.
+`PGR − PLR` no separa disposición, rebalanceo y creencia en reversión porque las tres reglas venden ganadoras: los tres escenarios dan positivo y significativo, +0.0971 (z = 91), +0.0124 (z = 18) y +0.0409 (z = 90). Un investigador con sólo este estimador concluiría "efecto disposición" tres veces y se equivocaría dos. Pero los tres mecanismos **condicionan en variables distintas** (precio de compra, peso relativo, retorno reciente), así que construimos tres particiones de los días-posición donde hacen predicciones opuestas y estimé la tasa de venta condicional en cada una, con intervalo bootstrap por cuenta, reportando la log-razón contra la tasa base.
 
 | escenario | tasa base | A: en pérdida con rebote | B: en ganancia infraponderada | C: en pérdida sobreponderada |
 |---|---|---|---|---|
@@ -247,7 +249,7 @@ Las tres firmas son inconfundibles. El rebalanceo **nunca** vende una ganadora i
 
 Clasificando por la **dirección** del vector de tres log-razones (coseno con las firmas de referencia, para no confundir el mecanismo con su intensidad), los escenarios 2, 3, 6 y 9 se identifican como disposición con coseno entre 0.974 y 1.000 y ≤ 0.022 con el siguiente candidato; el 7 como rebalanceo y el 8 como reversión, ambos con coseno 1.000; y el nulo y los dos de rotación pura devuelven "sin mecanismo detectable". Ningún falso positivo.
 
-Aquí también falló una predicción registrada: anticipé que la reversión dejaría las celdas B y C en la tasa base, y da B alta (+0.43) y C baja (−0.35), porque estar en ganancia correlaciona con haber subido recientemente. No invalida la separabilidad —sigue siendo la única firma con A positiva— pero mi patrón registrado no era el correcto.
+Aquí también falló una predicción registrada: anticipé que la reversión dejaría las celdas B y C en la tasa base, y da B alta (+0.43) y C baja (−0.35), porque estar en ganancia correlaciona con haber subido recientemente. No invalida la separabilidad (sigue siendo la única firma con A positiva) pero nuestro patrón registrado no era el correcto.
 
 ### Qué datos del mundo real harían falta
 
@@ -259,7 +261,7 @@ Las tres celdas no se construyen con un extracto de corretaje típico. Harían f
 
 Aun con todos esos datos hay límites que no se cruzan.
 
-**El punto de referencia es inobservable.** La teoría prospectiva sobre el precio de compra y la contabilidad mental sobre otro punto de referencia —máximo histórico, precio de entrada del año, promedio móvil— predicen conductas muy parecidas y sólo difieren en el umbral. Barberis y Xiong (2009) muestran además que la teoría prospectiva aplicada a la utilidad de la **riqueza realizada** predice el efecto disposición, mientras que aplicada a los retornos anuales frecuentemente predice lo contrario. Ninguna partición de los datos resuelve eso, porque la diferencia está en el argumento de la función de utilidad, no en la conducta observable.
+**El punto de referencia es inobservable.** La teoría prospectiva sobre el precio de compra y la contabilidad mental sobre otro punto de referencia (máximo histórico, precio de entrada del año, promedio móvil) predicen conductas muy parecidas y sólo difieren en el umbral. Barberis y Xiong (2009) muestran además que la teoría prospectiva aplicada a la utilidad de la **riqueza realizada** predice el efecto disposición, mientras que aplicada a los retornos anuales frecuentemente predice lo contrario. Ninguna partición de los datos resuelve eso, porque la diferencia está en el argumento de la función de utilidad, no en la conducta observable.
 
 **La disposición agregada y el equilibrio son objetos distintos.** Grinblatt y Han (2005) muestran que si una fracción de los inversionistas exhibe disposición, el precio de equilibrio se desvía del fundamental y genera momentum. Aquí los precios son exógenos y esa retroalimentación está apagada; con precios endógenos, parte de lo que `PGR − PLR` mide sería el efecto de la conducta sobre el propio precio de referencia.
 
@@ -277,7 +279,7 @@ Aprendimos sobre los estimadores, no sobre los inversionistas.
 
 El estimador estructural por razón de hazards resuelve los tres primeros problemas y no el cuarto: recupera el parámetro con error menor a 0.014, es invariante a las convenciones contables al 0.05%, tiene errores estándar bien calibrados (factor 1.12 entre trayectorias) y es igual de vulnerable a los *confounds*. La lección es que **precisión no es identificación**: un estimador puede ser insesgado para su estimando y aun así medir algo distinto de lo que uno cree.
 
-El coeficiente de Barber-Odean no mide sobreconfianza: mide el costo por unidad de rotación, que es una propiedad de la estructura de comisiones y spreads. En el barrido de `κ` la pendiente se mantiene en ≈ −0.003 mientras el turnover se cuadruplica. En su versión bruta está contaminada por dos artefactos distintos —causalidad reversa en los escenarios 3, 6 y 8; efectos de composición inducidos por los controles en el 7— que sólo se distinguen mirando la correlación cruda y el cambio de la pendiente al agregar controles. El IV funciona y mide la brecha (+0.0147 en el escenario 6), pero exige heterogeneidad exógena observable en la propensión a operar.
+El coeficiente de Barber-Odean no mide sobreconfianza: mide el costo por unidad de rotación, que es una propiedad de la estructura de comisiones y spreads. En el barrido de `κ` la pendiente se mantiene en ≈ −0.003 mientras el turnover se cuadruplica. En su versión bruta está contaminada por dos artefactos distintos (causalidad reversa en los escenarios 3, 6 y 8; efectos de composición inducidos por los controles en el 7) que sólo se distinguen mirando la correlación cruda y el cambio de la pendiente al agregar controles. El IV funciona y mide la brecha (+0.0147 en el escenario 6), pero exige heterogeneidad exógena observable en la propensión a operar.
 
 ---
 
@@ -312,7 +314,7 @@ python run_simulation.py --agents 1000 --days 504 --assets 60 --bootstrap 1000 -
 
 **Entorno.** Python 3.13.1 sobre Windows 11; numpy 2.2.2, pandas 2.2.3, scipy 1.15.1, statsmodels 0.14.4, matplotlib 3.10.0, pytest 9.1.1, nbformat 5.10.4, nbconvert 7.17.1, fijadas en `requirements.txt`, que sólo lista paquetes importados.
 
-**Semillas.** Semilla maestra 42, de la que se derivan por escenario cinco *streams* separados —`prices`, `population`, `decisions`, `bootstrap`, `placebo`— mediante `SeedSequence([42, sha256(clave)[:4]]).spawn(5)`. Usar SHA-256 en vez de `hash()` evita que `PYTHONHASHSEED` rompa la reproducibilidad. Los precios se generan siempre antes que la población.
+**Semillas.** Semilla maestra 42, de la que se derivan por escenario cinco *streams* separados (`prices`, `population`, `decisions`, `bootstrap`, `placebo`) mediante `SeedSequence([42, sha256(clave)[:4]]).spawn(5)`. Usar SHA-256 en vez de `hash()` evita que `PYTHONHASHSEED` rompa la reproducibilidad. Los precios se generan siempre antes que la población.
 
 **Tiempo de ejecución.** 387 segundos para 9 escenarios, 10 puntos de barrido, 30 réplicas, 24 celdas de rejilla contable, 1000 réplicas bootstrap por estimador y las 10 figuras, con el bucle diario vectorizado por agente-día.
 

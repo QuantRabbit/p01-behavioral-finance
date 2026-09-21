@@ -2,7 +2,6 @@
 
 ### Una auditoría con *ground truth* conocido sobre un mercado simulado
 
-- **Materia:** Comportamiento en las Finanzas y Toma de Decisiones
 - **Alumnos:** Juan Pablo Sánchez, Matteo Nelson, Edgardo González
 - **Profesor:** Prof. Luis Felipe Gómez Estrada
 - **Fecha de Entrega:** 21 de septiembre de 2026

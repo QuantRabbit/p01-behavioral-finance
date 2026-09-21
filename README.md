@@ -1,4 +1,4 @@
-# P01 — Simulador de finanzas conductuales con *ground truth*
+# P01 - Simulador de finanzas conductuales con *ground truth*
 
 Mercado sintético basado en agentes cuyo propósito es **auditar estimadores
 econométricos de sesgos conductuales usando parámetros conocidos**. Con datos
@@ -7,7 +7,6 @@ regla institucional o de un error de código. Aquí los parámetros se inyectan,
 modo que la pregunta deja de ser *¿existe el efecto disposición?* y pasa a ser
 **¿cuándo mienten los estimadores?**.
 
-- Materia: Comportamiento en las Finanzas y Toma de Decisiones (ITESO)
 - Alumnos: Juan Pablo Sánchez, Matteo Nelson, Edgardo González
 - Profesor: Prof. Luis Felipe Gómez Estrada
 - Reporte completo: [`REPORTE.md`](REPORTE.md)

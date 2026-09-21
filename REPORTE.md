@@ -8,8 +8,6 @@
 - **Repositorio de Código:** [github.com/QuantRabbit/p01-behavioral-finance](https://github.com/QuantRabbit/p01-behavioral-finance)
 - **Cuaderno Interactivo:** [Ejecutar en Google Colab](https://colab.research.google.com/github/QuantRabbit/p01-behavioral-finance/blob/main/notebooks/P01_Analisis.ipynb)
 
----
-
 ## 1. Resumen
 
 Construimos un mercado sintético de 60 activos y 504 días hábiles con 1000 agentes cuyos sesgos conductuales son parámetros que inyectamos y por lo tanto conocemos, corrimos sobre él los estimadores estándar de la literatura y comparamos lo estimado contra lo inyectado. Tres resultados.
@@ -20,15 +18,11 @@ Construimos un mercado sintético de 60 activos y 504 días hábiles con 1000 ag
 
 **Tercero: `PGR − PLR` no separa mecanismos, pero tres celdas discriminantes sí.** Los escenarios 3 (disposición), 7 (rebalanceo) y 8 (reversión) dan los tres un `PGR − PLR` positivo y significativo, los dos últimos con `δ = 0` inyectado, y son indistinguibles con ese estimador; con el vector de tres tasas de venta condicionales quedan perfectamente separados, con coseno ≥ 0.97 con la firma correcta y ≤ 0.02 con la siguiente. Como subproducto, el estadístico de horizontes de tenencia de Odean (1998) resulta arrastrado por la deriva del mercado: sobre 20 réplicas del nulo con `δ = 0`, su correlación con el retorno realizado es **+0.797 (t = 5.60)** y en **7 de 20** trayectorias la brecha tiene el signo que se lee como "efecto disposición".
 
----
-
 ## 2. Motivación y diseño experimental
 
 Con datos reales no existe *ground truth*: un coeficiente positivo es compatible con un sesgo psicológico, con una regla institucional, con un efecto de composición y con un error de código, y la literatura resuelve la ambigüedad con argumentos, no con evidencia. Aquí se resuelve por construcción, y la pregunta pasa a ser **¿cuándo mienten los estimadores?**. Eso cambia el criterio de éxito: un desacuerdo entre lo inyectado y lo estimado es el producto del trabajo, no un fracaso.
 
 Dos condiciones lo hacen legítimo. **Cero fuga de información**: la matriz completa de precios se genera antes de instanciar un solo agente, con un generador propio, y los agentes sólo la ven a través de un `PriceView` que levanta `LookAheadError` ante cualquier lectura de un día futuro; empíricamente, el retorno futuro a 20 días de los activos comprados, en exceso del transversal, es indistinguible de cero sobre ocho trayectorias independientes y no correlaciona con el turnover de quien los compró. Y **el parámetro inyectado está un nivel por debajo de la cantidad estimada**: no existe en el código ninguna sentencia `if ganancia: vender con probabilidad p`, que sólo se reflejaría a sí misma.
-
----
 
 ## 3. Diseño del simulador
 
@@ -75,8 +69,6 @@ Dentro del mismo bucle corren dos libros con las mismas decisiones, fechas, acti
 
 Como el libro bruto conserva las cantidades en unidades, el efectivo que ahorra queda ocioso; por eso reportamos además `gross_return_comp`, el retorno bruto capitalizado por composición diaria de los costos, cuya diferencia con el anterior es de segundo orden.
 
----
-
 ## 4. Decisiones contables declaradas
 
 Las cuatro decisiones exigidas están implementadas de verdad y son seleccionables por configuración.
@@ -111,8 +103,6 @@ La referencia `ask_paid` casi no mueve nada (+0.00023). **Ésa es una predicció
 
 ![Sensibilidad contable](outputs/figuras/fig10_sensibilidad_contable.png)
 
----
-
 ## 5. Pre-análisis
 
 `PRE_ANALISIS.md` se escribió y se registró **antes** de correr un solo estimador, en el commit `2d5dfc9` del 18 de septiembre de 2026, que contiene únicamente ese archivo y es el segundo de la historia de git. Todo lo posterior es resultado. Reproduzco las expectativas registradas (documento completo en `PRE_ANALISIS.md`):
@@ -126,8 +116,6 @@ La referencia `ask_paid` casi no mueve nada (+0.00023). **Ésa es una predicció
 > **Independencia.** «`Corr(δ,κ) ≈ 0`; `Corr(δ, Turnover)` negativa y apreciable (`< −0.2`); `Corr(κ, Turnover)` fuertemente positiva (`> +0.6`).»
 >
 > **Celdas discriminantes.** «Disposición: A baja, B alta, C baja. Rebalanceo: A base, B baja, C alta. Reversión: A alta, B base, C base. Predicción: los escenarios 3, 7 y 8 serán indistinguibles por `PGR−PLR` pero separables por el patrón de signos.»
-
----
 
 ## 6. Tabla principal de resultados
 
@@ -161,8 +149,6 @@ Nueve filas. Tablas completas en `outputs/tabla_principal.md` y `outputs/tabla_d
 
 ![Recuperación de delta](outputs/figuras/fig04_delta_recuperado_vs_inyectado.png)
 
----
-
 ## 7. Validación
 
 **Escenario nulo, 20 réplicas independientes.** `PGR − PLR` rechaza al 5% en **1 de 20** (5.0% empírico contra 5% nominal), `δ̂` también, y el cero cae dentro del intervalo bootstrap en 19 de 20: el tamaño del test es correcto.
@@ -180,8 +166,6 @@ En `κ ∈ {0, …, 0.8}` con `δ = 0`, el turnover crece monótonamente (3.05 �
 **Placebo de permutación.** Permutando el turnover entre cuentas 200 veces la pendiente colapsa: media −0.00002 con banda al 95% de `[−0.0017, +0.0014]` en el escenario 9, con el `β` observado de −0.00263 fuera de la banda. En el nulo el observado cae **dentro**, como debe.
 
 ![Placebo](outputs/figuras/fig07_placebo_permutacion.png)
-
----
 
 ## 8. Análisis por escenario
 
@@ -211,8 +195,6 @@ Aquí sí hay instrumento: `β_OLS^gross = +0.0066` (t = 2.91) contra `β_IV^gro
 
 Por definición del turnover anualizado `τ`, el volumen negociado es `2·τ·V̄·(T/252)`, de modo que `spread_cost/W₀` tiene pendiente teórica cerrada frente a `τ`. La observada coincide con la teórica con error relativo entre **0.9% y 11.8%**; las comisiones fijas pesan entre 48% y 56% del costo total; la identidad `r_gross − r_net = (spread + comisiones)/W₀` se cumple con error máximo de 2e-15.
 
----
-
 ## 9. Independencia
 
 Los cuatro puntos del enunciado, con los números de la tabla principal.
@@ -222,8 +204,6 @@ Los cuatro puntos del enunciado, con los números de la tabla principal.
 3. **`Corr(κ, Turnover)`.** Fuertemente positiva: +0.894, +0.773 y +0.788 en los escenarios 4, 5 y 9. En el 6 baja a +0.378 porque la variación de `δ` mete ruido en el turnover realizado.
 4. **La explicación.** El agente con `δ` alto tiene `h_loss = h₀·(1−δ)` casi nula y retiene indefinidamente las perdedoras. Ese *lock-in* congela una fracción creciente de su cartera y reduce el turnover observado. `δ` y `κ` son independientes **como parámetros inyectados**, pero `δ` contamina el turnover **realizado**, que es un output. La distinción entre el parámetro y el comportamiento que produce es el núcleo de esta sección: un estudio empírico observa el turnover, nunca `κ`.
 5. **Si `δ` y `κ` se hubieran generado correlacionados**, `β` dejaría de ser interpretable: sería imposible atribuir el efecto al costo de operar en vez de al *lock-in*, porque las cuentas de alto turnover serían sistemáticamente las de bajo `δ`. El IV tampoco salvaría nada, porque `κ` violaría la exclusión al afectar el retorno también por ese canal.
-
----
 
 ## 10. Confounds y separabilidad
 
@@ -253,8 +233,6 @@ Aquí también falló una predicción registrada: anticipé que la reversión de
 
 Las tres celdas no se construyen con un extracto de corretaje típico. Harían falta **pesos objetivo declarados** o el mandato de la cuenta (sin eso la celda C es inconstruible y el rebalanceo queda indistinguible de la disposición); **encuestas de expectativas** o etiquetas de tipo de orden, para identificar a quien opera por creencia en la reversión; **historial completo de lotes con base de costo fiscal**, para que el precio de referencia sea el que el inversionista usa; **calendario fiscal**, para separar la cosecha de pérdidas de diciembre; y **flujos de efectivo de la cuenta**, para separar la venta por liquidez.
 
----
-
 ## 11. Qué no pueden distinguir los estimadores
 
 Aun con todos esos datos hay límites que no se cruzan.
@@ -267,8 +245,6 @@ Aun con todos esos datos hay límites que no se cruzan.
 
 **El estadístico de horizontes de tenencia es directamente engañoso.** Sobre 20 trayectorias con `δ = κ = 0`, la brecha entre las medianas de tenencia de ganadoras y perdedoras tiene media +6.7 días y desviación 15.1, y correlaciona **+0.797 (t = 5.60)** con el retorno realizado del mercado; en 7 de las 20 es negativa, es decir, se leería como "los inversionistas retienen las perdedoras". El mecanismo es aritmético: con deriva positiva las posiciones que sobreviven más tiempo tienen más probabilidad de estar en ganancia. En un mercado bajista el estadístico finge disposición; en uno alcista finge lo contrario.
 
----
-
 ## 12. Conclusiones
 
 Aprendimos sobre los estimadores, no sobre los inversionistas.
@@ -279,8 +255,6 @@ El estimador estructural por razón de hazards resuelve los tres primeros proble
 
 El coeficiente de Barber-Odean no mide sobreconfianza: mide el costo por unidad de rotación, que es una propiedad de la estructura de comisiones y spreads. En el barrido de `κ` la pendiente se mantiene en ≈ −0.003 mientras el turnover se cuadruplica. En su versión bruta está contaminada por dos artefactos distintos (causalidad reversa en los escenarios 3, 6 y 8; efectos de composición inducidos por los controles en el 7) que sólo se distinguen mirando la correlación cruda y el cambio de la pendiente al agregar controles. El IV funciona y mide la brecha (+0.0147 en el escenario 6), pero exige heterogeneidad exógena observable en la propensión a operar.
 
----
-
 ## 13. Limitaciones y trabajo futuro
 
 Los precios son **exógenos**: la conducta no afecta al mercado. Eso hace posible el *ground truth* y a la vez apaga el canal de Grinblatt y Han (2005); un simulador con formación endógena de precios sería el siguiente paso y probablemente el más informativo.
@@ -288,8 +262,6 @@ Los precios son **exógenos**: la conducta no afecta al mercado. Eso hace posibl
 No hay **impuestos ni calendario fiscal**, que en datos reales son la explicación competidora más fuerte de las ventas de fin de año, ni flujos de efectivo, ni restricciones de liquidez. Los agentes tampoco **aprenden**: `δ_i` y `κ_i` son constantes durante los dos años, y un `δ` que decayera con la experiencia produciría un sesgo de cohorte que ningún estimador transversal detectaría. El libro bruto conserva las cantidades en unidades, de modo que el efectivo ahorrado queda ocioso; una implementación con reinversión proporcional sería más limpia.
 
 Los *confounds* se corren como poblaciones puras. Una población **mixta** es el caso realista y permitiría probar si las celdas discriminantes recuperan las proporciones de la mezcla, que es la pregunta de identificación que de verdad importa.
-
----
 
 ## 14. Referencias
 

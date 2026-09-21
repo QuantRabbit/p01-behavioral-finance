@@ -1,9 +1,8 @@
-# Pre-análisis — Proyecto P01
+# Pre-análisis: Proyecto P01
 
 **Simulador de finanzas conductuales con *ground truth* conocido**
 
 - Materia: Comportamiento en las Finanzas y Toma de Decisiones
-- Institución: ITESO, Universidad Jesuita de Guadalajara
 - Alumnos: Juan Pablo Sánchez, Matteo Nelson, Edgardo González
 - Profesor: Prof. Luis Felipe Gómez Estrada
 - **Fecha de redacción: 18 de septiembre de 2026**

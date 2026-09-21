@@ -3,7 +3,6 @@
 ### Una auditoría con *ground truth* conocido sobre un mercado simulado
 
 - **Materia:** Comportamiento en las Finanzas y Toma de Decisiones
-- **Institución:** ITESO, Universidad Jesuita de Guadalajara
 - **Alumnos:** Juan Pablo Sánchez, Matteo Nelson, Edgardo González
 - **Profesor:** Prof. Luis Felipe Gómez Estrada
 - **Fecha de Entrega:** 21 de septiembre de 2026

@@ -24,50 +24,61 @@ Con datos reales no existe *ground truth*: un coeficiente positivo es compatible
 
 Dos condiciones lo hacen legítimo. **Cero fuga de información**: la matriz completa de precios se genera antes de instanciar un solo agente, con un generador propio, y los agentes sólo la ven a través de un `PriceView` que levanta `LookAheadError` ante cualquier lectura de un día futuro; empíricamente, el retorno futuro a 20 días de los activos comprados, en exceso del transversal, es indistinguible de cero sobre ocho trayectorias independientes y no correlaciona con el turnover de quien los compró. Y **el parámetro inyectado está un nivel por debajo de la cantidad estimada**: no existe en el código ninguna sentencia `if ganancia: vender con probabilidad p`, que sólo se reflejaría a sí misma.
 
+\newpage
+
 ## 3. Diseño del simulador
 
 ### 3.1 El mercado
 
-Los retornos logarítmicos diarios siguen un modelo de tres factores con `Δt = 1/252`:
+Los retornos logarítmicos diarios siguen un modelo de tres factores con $\Delta t = 1/252$:
 
-```
-r_{m,t} = (μ_m − ½σ_m²)·Δt + β_{m,1}·F_{1,t} + β_{m,2}·F_{2,t} + β_{m,3}·F_{3,t} + ε_{m,t}
-```
+$$r_{m,t} = \left(\mu_m - \frac{1}{2}\sigma_m^2\right)\Delta t + \beta_{m,1} F_{1,t} + \beta_{m,2} F_{2,t} + \beta_{m,3} F_{3,t} + \varepsilon_{m,t}$$
 
-`F₁` es el factor de mercado (μ = 8%, σ = 16% anuales), `F₂` uno sectorial (σ = 12%) y `F₃` un segundo factor de estilo ortogonal (σ = 8%). Las betas se sortean uniformes en `[0.65, 1.35]`, `[−0.6, 0.6]` y `[−0.4, 0.4]`; la volatilidad idiosincrática en `[12%, 28%]`; los precios iniciales en `[25, 150]`. La corrección de Itô usa la varianza **total** del activo, de modo que la deriva del retorno simple quede en `β₁·μ_mercado`.
+donde:
+- $F_{1,t}$ representa el factor de mercado ($\mu = 8\%$, $\sigma = 16\%$ anuales).
+- $F_{2,t}$ es el factor sectorial ($\sigma = 12\%$).
+- $F_{3,t}$ es un segundo factor de estilo ortogonal ($\sigma = 8\%$).
+- $\varepsilon_{m,t} \sim \mathcal{N}(0, \sigma_{\varepsilon,m}^2 \Delta t)$ es el término de error idiosincrático.
 
-El modelo de factores es superior al GBM independiente porque genera correlación transversal realista (con 0.322 de correlación media entre activos) y con ella riesgo no diversificable: sin ese riesgo el control de volatilidad de Barber-Odean sería ruido, y con él resulta decisivo para diagnosticar el escenario 7. Los factores y el ruido son i.i.d. en el tiempo, así que **no hay momentum ni reversión real**: la autocorrelación agrupada en los rezagos 1 a 10 cae dentro de la banda nula por permutación temporal conjunta, con máximo de |0.011|. Eso convierte al escenario 8 en un *confound* genuino.
+Las cargas factoriales se sortean de manera uniforme: $\beta_{m,1} \in [0.65, 1.35]$, $\beta_{m,2} \in [-0.6, 0.6]$ y $\beta_{m,3} \in [-0.4, 0.4]$; la volatilidad idiosincrática en $[12\%, 28\%]$; y los precios iniciales en $[25, 150]$ USD. La corrección de Itô ($-\frac{1}{2}\sigma_m^2 \Delta t$) emplea la varianza total del activo para asegurar que la deriva esperada del retorno simple anualizado sea exactamente $\beta_{m,1} \mu_{\text{mercado}}$.
 
-Cada escenario genera su **propia** trayectoria: es una economía independiente. Eso impide que una sola realización afortunada gobierne las conclusiones, pero implica que los niveles de retorno no son comparables entre escenarios; las trayectorias van de −19.0% a +104.8% a dos años.
+El modelo de factores es superior al movimiento browniano geométrico independiente porque genera correlación transversal realista (0.322 de correlación media entre activos) y, con ella, riesgo no diversificable. Sin este componente, el control por volatilidad de Barber y Odean se reduciría a ruido estadístico, mientras que aquí resulta determinante para diagnosticar el escenario 7. Dado que los factores y choques son independientes e idénticamente distribuidos en el tiempo, **no existe momentum ni reversión real**: las autocorrelaciones agrupadas para los rezagos 1 a 10 caen dentro de la banda nula obtenida por permutación temporal conjunta (máximo de |0.011|). Esto convierte al escenario 8 en un escenario de confusión (*confound*) genuino.
+
+Cada escenario genera su propia trayectoria independiente. Esto evita que una sola realización afortunada condicione las conclusiones, implicando a su vez que los niveles acumulados de retorno no son directamente comparables entre escenarios (las trayectorias oscilan entre −19.0% y +104.8% a dos años).
 
 ![Trayectorias de precios](outputs/figuras/fig01_trayectorias_precios.png)
 
+\newpage
+
 ### 3.2 La regla de decisión
 
-Cada agente `i` tiene dos parámetros inyectados, `δ_i ∈ [0,1]` (efecto disposición) y `κ_i ∈ [0,1]` (sobreprecisión / churn), que modulan una **tasa de riesgo diaria**:
+Cada agente $i$ posee dos parámetros inyectados: $\delta_i \in [0,1]$ (propensión al efecto disposición) y $\kappa_i \in [0,1]$ (sobreprecisión o propensión a rotar), los cuales modulan su tasa de riesgo diaria de venta (*hazard rate*):
 
-```
-h_0(κ_i)  = h_base + c_κ·κ_i          h_base = 0.015,  c_κ = 0.060
-h_gain    = min(0.99, h_0·(1 + δ_i))  posición por encima del precio de referencia
-h_loss    = max(1e-4, h_0·(1 − δ_i))  posición por debajo
-h_neutral = h_0
-```
+$$h_0(\kappa_i) = h_{\text{base}} + c_\kappa \kappa_i \quad \text{con} \quad h_{\text{base}} = 0.015, \quad c_\kappa = 0.060$$
 
-`h_base = 0.015` corresponde a un horizonte medio de `1/0.015 ≈ 67` días hábiles, del orden de los horizontes minoristas de Odean (1998), y la simulación lo confirma como comportamiento emergente: en el escenario nulo la mediana de tenencia es **62.0** días para ganadoras y **65.5** para perdedoras. `PGR`, `PLR`, el turnover y los horizontes **emergen** de la interacción entre esta tasa, la trayectoria y el tiempo que la posición lleva abierta; nunca son inputs.
+La tasa condicional al estado de la posición respecto a su precio de referencia $P_{\text{ref}}$ se define como:
+
+$$h_i(t) = \begin{cases} 
+\min\left(0.99, \, h_0(1 + \delta_i)\right) & \text{si } P_t > P_{\text{ref}} \quad (\text{posición en ganancia}) \\ 
+\max\left(10^{-4}, \, h_0(1 - \delta_i)\right) & \text{si } P_t < P_{\text{ref}} \quad (\text{posición en pérdida}) \\ 
+h_0 & \text{si } P_t = P_{\text{ref}} \quad (\text{posición neutral}) 
+\end{cases}$$
+
+El parámetro base $h_{\text{base}} = 0.015$ corresponde a un horizonte medio de tenencia de $1/0.015 \approx 67$ días hábiles, representativo de los portafolios minoristas documentados por Odean (1998). En la simulación este comportamiento emerge de forma natural: en el escenario nulo la mediana de tenencia observada es de 62.0 días para posiciones ganadoras y de 65.5 días para perdedoras. Las medidas $PGR$, $PLR$, la rotación de cartera y los horizontes emergen de la interacción entre esta tasa, la trayectoria de mercado y la antigüedad de la posición, sin ser nunca variables impuestas.
 
 ### 3.3 Distribuciones, no escalares
 
-Con objetivo distinto de cero, `δ_i` y `κ_i` se sortean de una Beta reparametrizada por media y concentración (`a = m·ν`, `b = (1−m)·ν`, `ν = 20`) desde **dos flujos independientes**. Con objetivo cero se usa el valor exacto 0 para todos, porque la ausencia del sesgo es el punto del escenario, y la consecuencia (que la correlación no esté definida) se reporta como `n/d`, nunca como `0.0000`.
+Para los escenarios con sesgo activo, $\delta_i$ y $\kappa_i$ se sortean de una distribución Beta reparametrizada en función de su media ($m$) y concentración ($\nu = 20$), con parámetros $a = m \nu$ y $b = (1-m)\nu$, obtenidos a partir de dos flujos pseudoaleatorios independientes. En los escenarios sin sesgo se asigna el valor idéntico a cero ($\delta_i = 0$ o $\kappa_i = 0$) a toda la población, dado que modelar la ausencia del sesgo es el objetivo del escenario. En estos casos, la correlación transversal se reporta rigurosamente como `n/d` (no definida por varianza cero), evitando valores artificiales de `0.0000`.
 
 ![Distribución de delta y kappa](outputs/figuras/fig02_distribucion_delta_kappa.png)
 
 ### 3.4 Costos y dos libros contables
 
-Comisión fija de **$1.00 USD por orden** y spread bid-ask total de **10 puntos base** (medio spread 5 bps): las compras ejecutan al ask `P·(1.0005)` y las ventas al bid `P·(0.9995)`. Ambos son parámetros de línea de comandos.
+Se modela una comisión fija de \$1.00 USD por orden y un diferencial *bid-ask* total de 10 puntos base (medio *spread* de 5 bps). Las compras se ejecutan al precio de oferta $P_{\text{ask}} = P \cdot (1 + 0.0005)$ y las ventas al de demanda $P_{\text{bid}} = P \cdot (1 - 0.0005)$, ambos parametrizables desde la consola.
 
-Dentro del mismo bucle corren dos libros con las mismas decisiones, fechas, activos y cantidades en unidades: el **neto** (bid/ask con comisión) y el **bruto** (precio medio, sin comisión). Así `r_gross − r_net` es exactamente el costo acumulado y `β_gross` queda limpio de la definición de costos. La identidad se verifica con error máximo de **4.3e-15** y la conservación de valor (`efectivo + posiciones + costos = riqueza inicial + P&L de mercado`) con **4.1e-15**, nueve órdenes de magnitud bajo la tolerancia pedida.
+El simulador gestiona simultáneamente dos libros contables sobre las mismas decisiones, fechas y cantidades: el libro **neto** (que descuenta comisiones y *spread*) y el libro **bruto** (liquidado a precio medio sin costos). Así, la diferencia $r_{\text{gross}} - r_{\text{net}}$ mide con exactitud el costo acumulado y la estimación de $\beta_{\text{gross}}$ queda limpia de la estructura de fricciones. La identidad contable se satisface con un error máximo de $4.3 \times 10^{-15}$ y la conservación patrimonial ($\text{efectivo} + \text{posiciones} + \text{costos} = \text{riqueza inicial} + \text{P\&L de mercado}$) se cumple con un error máximo de $4.1 \times 10^{-15}$, nueve órdenes de magnitud por debajo de la tolerancia exigida.
 
-Como el libro bruto conserva las cantidades en unidades, el efectivo que ahorra queda ocioso; por eso reportamos además `gross_return_comp`, el retorno bruto capitalizado por composición diaria de los costos, cuya diferencia con el anterior es de segundo orden.
+Dado que el libro bruto mantiene las cantidades en títulos, el efectivo no consumido en fricciones permanece ocioso. Por ello, reportamos además el retorno bruto capitalizado por reinversión diaria ($r_{\text{gross}}^{\text{comp}}$), cuya diferencia con el retorno bruto estándar es de segundo orden.
 
 ## 4. Decisiones contables declaradas
 

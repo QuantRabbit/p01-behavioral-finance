@@ -25,19 +25,20 @@ estimadores estándar de la literatura?"**.
 
 Dos parámetros por agente constituyen la verdad conocida:
 
-- `δ_i ∈ [0,1]` — intensidad del efecto disposición.
-- `κ_i ∈ [0,1]` — sobreprecisión / propensión a rotar la cartera.
+- $\delta_i \in [0,1]$: intensidad del efecto disposición.
+- $\kappa_i \in [0,1]$: sobreprecisión o propensión a rotar la cartera.
 
 Ninguno de los dos es una probabilidad de venta ni una tasa de rotación.
-Modulan una **tasa de riesgo diaria** (hazard), un nivel por debajo de las
+Modulan una **tasa de riesgo diaria** (*hazard rate*), un nivel por debajo de las
 cantidades que se van a estimar:
 
-```
-h_0(κ_i)  = h_base + c_κ · κ_i           h_base = 0.015,  c_κ = 0.060
-h_gain    = min(0.99, h_0 · (1 + δ_i))   posición por ENCIMA del precio de referencia
-h_loss    = max(1e-4, h_0 · (1 − δ_i))   posición por DEBAJO del precio de referencia
-h_neutral = h_0                          exactamente en el precio de referencia
-```
+$$h_0(\kappa_i) = h_{\text{base}} + c_\kappa \kappa_i \quad \text{con} \quad h_{\text{base}} = 0.015, \quad c_\kappa = 0.060$$
+
+$$h_i(t) = \begin{cases} 
+\min(0.99, \, h_0(1 + \delta_i)) & \text{si } P_t > P_{\text{ref}} \quad (\text{posición en ganancia}) \\ 
+\max(10^{-4}, \, h_0(1 - \delta_i)) & \text{si } P_t < P_{\text{ref}} \quad (\text{posición en pérdida}) \\ 
+h_0 & \text{si } P_t = P_{\text{ref}} \quad (\text{posición neutral}) 
+\end{cases}$$
 
 `PGR`, `PLR`, el turnover, el número de operaciones y los horizontes de tenencia
 son **outputs emergentes** de la interacción entre esta tasa, la trayectoria de
@@ -99,15 +100,15 @@ población**, de modo que su correlación muestral sea ruido de orden `1/√N`.
 
 | # | Clave | `δ` objetivo | dist. `δ` | `κ` objetivo | dist. `κ` | Confound |
 |---|---|---|---|---|---|---|
-| 1 | `nulo` | 0.0 | punto | 0.0 | punto | — |
-| 2 | `disposicion_baja` | 0.3 | Beta(6,14) | 0.0 | punto | — |
-| 3 | `disposicion_alta` | 0.8 | Beta(16,4) | 0.0 | punto | — |
-| 4 | `rotacion_baja` | 0.0 | punto | 0.3 | Beta(6,14) | — |
-| 5 | `rotacion_alta` | 0.0 | punto | 0.8 | Beta(16,4) | — |
-| 6 | `ambos_activos` | 0.8 | Beta(16,4) | 0.8 | Beta(16,4) | — |
+| 1 | `nulo` | 0.0 | punto | 0.0 | punto | - |
+| 2 | `disposicion_baja` | 0.3 | Beta(6,14) | 0.0 | punto | - |
+| 3 | `disposicion_alta` | 0.8 | Beta(16,4) | 0.0 | punto | - |
+| 4 | `rotacion_baja` | 0.0 | punto | 0.3 | Beta(6,14) | - |
+| 5 | `rotacion_alta` | 0.0 | punto | 0.8 | Beta(16,4) | - |
+| 6 | `ambos_activos` | 0.8 | Beta(16,4) | 0.8 | Beta(16,4) | - |
 | 7 | `confound_rebalanceo` | 0.0 | punto | 0.0 | punto | rebalanceo |
 | 8 | `confound_reversion` | 0.0 | punto | 0.0 | punto | reversión |
-| 9 | `heterogeneo` | — | `U[0,1]` | — | `U[0,1]` | — |
+| 9 | `heterogeneo` | - | `U[0,1]` | - | `U[0,1]` | - |
 
 Además: barrido de monotonicidad `δ ∈ {0, 0.2, 0.4, 0.6, 0.8}` con `κ = 0` y
 `κ ∈ {0, 0.2, 0.4, 0.6, 0.8}` con `δ = 0`; y 20 réplicas del escenario nulo con
@@ -120,7 +121,7 @@ semillas distintas.
   (venta **parcial**); por abajo compra para completar. Condiciona en el
   **peso relativo**, nunca en el precio de compra. Es un agente perfectamente
   racional.
-- *Reversión*: cree —falsamente, porque los retornos son i.i.d.— que lo que
+- *Reversión*: cree (falsamente, porque los retornos son i.i.d.) que lo que
   subió va a bajar. `h = h_base · (1 + 4.0 · clip(r_pasado_10d / 0.10, −1, +1))`.
   Condiciona en el **retorno reciente**, nunca en el precio de compra.
 
@@ -203,8 +204,8 @@ cuentas por puro azar de los sorteos de venta, y ese turnover cuesta dinero.
 La regresión de Barber-Odean encontrará entonces una pendiente negativa
 significativa **sin que exista un solo agente sobreconfiado**. Si eso ocurre, el
 hallazgo es que la regresión identifica el costo mecánico de operar, no la
-sobreconfianza: cualquier fuente de rotación —ruido, rebalanceo, impuestos,
-liquidez— produce el mismo coeficiente. Se registra aquí para que no pueda
+sobreconfianza: cualquier fuente de rotación (ruido, rebalanceo, impuestos,
+liquidez) produce el mismo coeficiente. Se registra aquí para que no pueda
 presentarse después como si se hubiera anticipado trivialmente.
 
 Magnitud esperada de `β_net`: el costo por dólar operado es
@@ -244,9 +245,9 @@ output. Retener indefinidamente las perdedoras reduce el número de operaciones.
 
 | Celda | Definición | Disposición | Rebalanceo | Reversión |
 |---|---|---|---|---|
-| A — "rebote bajo el agua" | en pérdida **y** `r_10d > +2%` | tasa **baja** | ≈ base | tasa **alta** |
-| B — "ganadora infraponderada" | en ganancia **y** peso < objetivo·(1−15%) | tasa **alta** | tasa **baja** | ≈ base |
-| C — "perdedora sobreponderada" | en pérdida **y** peso > objetivo·(1+15%) | tasa **baja** | tasa **alta** | ≈ base |
+| A: "rebote bajo el agua" | en pérdida **y** `r_10d > +2%` | tasa **baja** | ≈ base | tasa **alta** |
+| B: "ganadora infraponderada" | en ganancia **y** peso < objetivo·(1−15%) | tasa **alta** | tasa **baja** | ≈ base |
+| C: "perdedora sobreponderada" | en pérdida **y** peso > objetivo·(1+15%) | tasa **baja** | tasa **alta** | ≈ base |
 
 Predicción: los escenarios 3, 7 y 8 serán **indistinguibles** por `PGR−PLR`
 (los tres dan positivo y significativo) pero **separables** por el patrón de
